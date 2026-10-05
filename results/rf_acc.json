@@ -1,0 +1,9 @@
+{
+  "model": "rf",
+  "sensors": "acc",
+  "seed": 42,
+  "accuracy": 0.7648456057007126,
+  "macro_f1": 0.7615403993564551,
+  "epochs": 0,
+  "train_time_sec": 0.44140850007534027
+}

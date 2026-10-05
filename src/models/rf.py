@@ -377,7 +377,7 @@ def main() -> None:
     # is run. This allows this RF module to be developed before DATA.md and
     # the loader are finished.
     try:
-        from src.data import load_data
+        from ..data import load_data
     except ImportError as exc:
         raise ImportError(
             "Could not import load_data from data_loader.py.\n"

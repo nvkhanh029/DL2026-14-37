@@ -1,0 +1,9 @@
+{
+  "model": "rf",
+  "sensors": "acc_gyro",
+  "seed": 42,
+  "accuracy": 0.8038683406854428,
+  "macro_f1": 0.8016274423907127,
+  "epochs": 0,
+  "train_time_sec": 0.4525180999189615
+}
