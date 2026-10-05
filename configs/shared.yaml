@@ -1,0 +1,61 @@
+# Shared fixed rules for ALL models. Do not change without leader approval.
+# Every script must read these values instead of hard-coding them.
+
+seed: 42   # data code uses it for the val split; training scripts must also
+           # seed random, numpy and torch with this value
+
+dataset:
+  name: UCI-HAR
+  source_id: 240             # UCI ML Repository dataset ID (see DATA.md for URL, version, checksum)
+  split: official            # official train/test split
+  window_size: 128           # time steps per window, 50 Hz, 50% overlap (as supplied by UCI)
+  classes: [walking, upstairs, downstairs, sitting, standing, laying]  # labels 0-5
+  val_split:
+    method: subject_wise     # whole subjects, not random windows
+    source: official_train   # carved from train only, never from test
+    n_subjects: 4            # of the 21 train subjects
+    stratified: false        # but all 6 classes must appear in train and val
+    seed: 42
+    val_subjects: [17, 25, 26, 30]
+    test_subjects: [2, 4, 9, 10, 12, 13, 18, 20, 24]
+  sizes:
+    train: 5800
+    val: 1552
+    test: 2947
+  normalization:
+    type: per_channel_zscore
+    fit_on: train_only       # mean/std computed on train, applied to val and test
+
+sensors:
+  acc:
+    channels: 3              # total_acc x, y, z (includes gravity)
+    input_shape: [128, 3]    # (N, 128, 3)
+  acc_gyro:
+    channels: 6              # total_acc x, y, z + body_gyro x, y, z
+    input_shape: [128, 6]    # (N, 128, 6)
+
+metrics:
+  - accuracy
+  - macro_f1                 # classes are mildly imbalanced
+
+# Allowed runs (6 total)
+runs:
+  rf: [acc, acc_gyro]
+  cnn: [acc_gyro]
+  lstm: [acc_gyro]
+  cnn_lstm: [acc, acc_gyro]
+
+# Each run writes results/<model>_<sensors>.json with exactly these fields
+result_format:
+  model: str                 # rf | cnn | lstm | cnn_lstm
+  sensors: str               # acc | acc_gyro
+  seed: int
+  accuracy: float
+  macro_f1: float
+  epochs: int                # 0 for rf
+  train_time_sec: float
+
+paths:
+  results: results/
+  analysis_results: results/analysis/
+  figures: figures/
