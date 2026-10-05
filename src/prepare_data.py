@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import itertools
 import json
+import urllib.request
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -19,6 +20,10 @@ WINDOW_SIZE = 128
 ACTIVITY_COUNT = 6
 EXPECTED_OFFICIAL_COUNTS = {"train": 7352, "test": 2947}
 RAW_DATASET_DIRNAME = "UCI HAR Dataset"
+DATASET_URL = (
+    "https://archive.ics.uci.edu/static/public/240/"
+    "human+activity+recognition+using+smartphones.zip"
+)
 
 
 def prepare_datasets(
@@ -157,12 +162,8 @@ def _ensure_raw_dataset(data_dir: Path) -> Path:
 
     archive_path = data_dir / "uci_har.zip"
     if not archive_path.is_file():
-        raise FileNotFoundError(
-            f"UCI HAR archive not found: {archive_path}. "
-            "Place the UCI download at data/uci_har.zip, then rerun preparation."
-        )
-        
-    # Extracts the UCI HAR archive to the specified data directory.
+        _download_archive(archive_path)
+
     _extract_archive(archive_path, data_dir)
     nested_archive = data_dir / f"{RAW_DATASET_DIRNAME}.zip"
     if not _has_raw_dataset(dataset_dir) and nested_archive.is_file():
@@ -172,6 +173,17 @@ def _ensure_raw_dataset(data_dir: Path) -> Path:
             f"Archive did not contain the expected UCI HAR dataset at {dataset_dir}"
         )
     return dataset_dir
+
+
+def _download_archive(archive_path: Path) -> None:
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = archive_path.with_name(f"{archive_path.name}.download")
+    try:
+        urllib.request.urlretrieve(DATASET_URL, temporary_path)
+        temporary_path.replace(archive_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
 
 # Validates that all paths in the UCI HAR archive are safe and do not contain any unsafe characters or patterns.
 def _validate_archive_paths(archive: zipfile.ZipFile) -> None:

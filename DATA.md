@@ -8,6 +8,8 @@ dataset:
 - Dataset page: https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones
 - Download: https://archive.ics.uci.edu/static/public/240/human+activity+recognition+using+smartphones.zip
 - UCI dataset ID: 240
+- Dataset version: 1.0
+- Download ZIP SHA256: `C00B803081A5C797CD5E4B83700A9810B38D53D9D84E01917E090E1FDBC81031`
 - License: CC BY 4.0
 
 Thirty volunteers performed six activities while wearing a waist-mounted
@@ -21,9 +23,9 @@ divided into fixed windows.
 The preparation script writes both model input variants under
 `data/processed/`:
 
-| Version | File | Channels | Window shape |
-| --- | --- | --- | --- |
-| Acc | `acc.npz` | `total_acc_x`, `total_acc_y`, `total_acc_z` | `(128, 3)` |
+| Version  | File             | Channels                                                                                             | Window shape |
+| -------- | ---------------- | ---------------------------------------------------------------------------------------------------- | ------------ |
+| Acc      | `acc.npz`      | `total_acc_x`, `total_acc_y`, `total_acc_z`                                                    | `(128, 3)` |
 | Acc+Gyro | `acc_gyro.npz` | `total_acc_x`, `total_acc_y`, `total_acc_z`, `body_gyro_x`, `body_gyro_y`, `body_gyro_z` | `(128, 6)` |
 
 `total_acc` includes gravity, which carries useful orientation information
@@ -45,14 +47,14 @@ in `data/processed/summary.json` and each NPZ file.
 
 Labels are converted from UCI's 1-6 encoding to zero-based classes:
 
-| Label | Activity |
-| --- | --- |
-| 0 | WALKING |
-| 1 | WALKING_UPSTAIRS |
-| 2 | WALKING_DOWNSTAIRS |
-| 3 | SITTING |
-| 4 | STANDING |
-| 5 | LAYING |
+| Label | Activity           |
+| ----- | ------------------ |
+| 0     | WALKING            |
+| 1     | WALKING_UPSTAIRS   |
+| 2     | WALKING_DOWNSTAIRS |
+| 3     | SITTING            |
+| 4     | STANDING           |
+| 5     | LAYING             |
 
 Each channel is normalized independently using its mean and population
 standard deviation over all samples and windows in the training split only.
@@ -63,20 +65,17 @@ on normalized training channels.
 
 ## Download and prepare
 
-Download the ZIP from the UCI link above and place it at
-`data/uci_har.zip`. This repository does not download the dataset at runtime.
-The downloaded outer ZIP contains the original `UCI HAR Dataset.zip`; the
-preparation script safely extracts both archive layers. From the repository
-root, install the runtime dependencies and run:
+From the repository root, install the runtime dependencies and run:
 
 ```powershell
 pip install -r requirements.txt
 python src/prepare_data.py
 ```
 
-The raw archive is already present at `data/uci_har.zip` in this workspace.
-If the dataset has already been extracted, preparation reuses it. To choose a
-different validation subject draw:
+If the dataset is not already extracted, preparation downloads the ZIP from
+UCI. The outer ZIP contains the original `UCI HAR Dataset.zip`; the preparation
+script safely extracts both archive layers. To choose a different validation
+subject draw:
 
 ```powershell
 python src/prepare_data.py --val-seed 7
@@ -97,9 +96,11 @@ Each NPZ contains `X_train`, `X_val`, and `X_test` arrays shaped
 
 ## Loading batches
 
-The project loader returns PyTorch `DataLoader` objects in train, validation,
-test order, followed by the channel count. Batches are CPU tensors so the
-training loop can move them to its selected device:
+`load_data(sensors="acc"|"acc_gyro")` returns six NumPy arrays in
+`X_train, y_train, X_val, y_val, X_test, y_test` order. For PyTorch workflows,
+`load_processed` returns `DataLoader` objects in train, validation, test order,
+followed by the channel count. Batches are CPU tensors so the training loop can
+move them to its selected device:
 
 ```python
 import torch
