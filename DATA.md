@@ -8,7 +8,7 @@ This project uses the UCI Human Activity Recognition Using Smartphones (UCI HAR)
 - Download: https://archive.ics.uci.edu/static/public/240/human+activity+recognition+using+smartphones.zip
 - UCI dataset ID: 240
 - Dataset version: 1.0
-- Download ZIP SHA256: `C00B803081A5C797CD5E4B83700A9810B38D53D9D84E01917E090E1FDBC81031`
+- Download ZIP SHA256: `c00b803081a5c797cd5e4b83700a9810b38d53d9d84e01917e090e1fdbc81031`
 - License: CC BY 4.0
 
 Thirty volunteers performed six activities while wearing a waist-mounted smartphone. The accelerometer and gyroscope signals were sampled at 50 Hz. This project reads the supplied segmented inertial signals, not the separate 561-feature engineered dataset. The UCI signals have already been filtered and divided into fixed windows.
@@ -45,14 +45,14 @@ Each channel is normalized independently using its mean and population standard 
 
 From the repository root, install the runtime dependencies and run:
 
-```powershell
+```bash
 pip install -r requirements.txt
 python src/prepare_data.py
 ```
 
 If the dataset is not already extracted, preparation downloads the ZIP from UCI. The outer ZIP contains the original `UCI HAR Dataset.zip`; the preparation script safely extracts both archive layers. To choose a different validation subject draw:
 
-```powershell
+```bash
 python src/prepare_data.py --val-seed 7
 ```
 
