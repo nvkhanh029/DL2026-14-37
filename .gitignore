@@ -1,6 +1,5 @@
 data/*
 !data/.gitkeep
-!data/uci_har.zip
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
