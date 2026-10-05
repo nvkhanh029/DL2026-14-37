@@ -24,7 +24,6 @@ CHANNELS: dict[DatasetVersion, tuple[str, ...]] = {
     ),
 }
 
-
 def load_processed(
     version: DatasetVersion,
     batch_size: int = 64,
@@ -47,6 +46,7 @@ def load_processed(
             "Run `python src/prepare_data.py` from the project root first."
         )
 
+    # Copy arrays before wrapping them as tensors so they remain writable after the NPZ closes.
     with np.load(processed_path, allow_pickle=False) as stored:
         datasets = []
         for split in ("train", "val", "test"):
@@ -65,6 +65,7 @@ def load_processed(
         DataLoader(
             dataset,
             batch_size=batch_size,
+            # Shuffle training batches only; validation and test order stays deterministic.
             shuffle=(split == "train"),
             num_workers=num_workers,
         )

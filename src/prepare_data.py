@@ -51,6 +51,7 @@ def prepare_datasets(
             raise ValueError(f"Subject and label counts differ in the official {split} split")
 
     raw_train = official["train"]
+    # Hold out complete subjects so overlapping windows cannot cross split boundaries.
     val_subjects = _select_validation_subjects(
         raw_train[1], raw_train[2], seed=val_seed
     )
@@ -86,6 +87,7 @@ def prepare_datasets(
                     selected["train"][2][val_mask]),
             "test": selected["test"],
         }
+        # Fit normalization only on training windows to avoid validation/test leakage.
         mean, std = _training_statistics(split_arrays["train"][0])
         if not np.isfinite(mean).all() or not np.isfinite(std).all() or (std == 0).any():
             raise ValueError(f"Invalid training normalization statistics for {version}")
@@ -135,7 +137,7 @@ def prepare_datasets(
     summary_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return summary
 
-
+# Reads 1 official split's data from the raw UCI HAR dataset and returns the features, labels, and subjects.
 def _read_official_split(
     raw_dir: Path, split: str
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -147,7 +149,7 @@ def _read_official_split(
         raise ValueError(f"Signals, labels, and subjects have different counts in {split}")
     return total_acc, labels, subjects
 
-
+# Ensures the raw UCI HAR dataset is present in the given directory, extracting it from a local archive if necessary, and returns the path to the raw dataset directory.
 def _ensure_raw_dataset(data_dir: Path) -> Path:
     dataset_dir = data_dir / RAW_DATASET_DIRNAME
     if _has_raw_dataset(dataset_dir):
@@ -159,7 +161,8 @@ def _ensure_raw_dataset(data_dir: Path) -> Path:
             f"UCI HAR archive not found: {archive_path}. "
             "Place the UCI download at data/uci_har.zip, then rerun preparation."
         )
-
+        
+    # Extracts the UCI HAR archive to the specified data directory.
     _extract_archive(archive_path, data_dir)
     nested_archive = data_dir / f"{RAW_DATASET_DIRNAME}.zip"
     if not _has_raw_dataset(dataset_dir) and nested_archive.is_file():
@@ -170,7 +173,7 @@ def _ensure_raw_dataset(data_dir: Path) -> Path:
         )
     return dataset_dir
 
-
+# Validates that all paths in the UCI HAR archive are safe and do not contain any unsafe characters or patterns.
 def _validate_archive_paths(archive: zipfile.ZipFile) -> None:
     for member in archive.infolist():
         name = member.filename
@@ -178,7 +181,7 @@ def _validate_archive_paths(archive: zipfile.ZipFile) -> None:
         if "\\" in name or path.is_absolute() or ".." in path.parts:
             raise RuntimeError(f"Unsafe path in local UCI HAR archive: {name!r}")
 
-
+# Extracts the UCI HAR archive to the specified destination directory, validating paths and handling errors.
 def _extract_archive(archive_path: Path, destination: Path) -> None:
     try:
         with zipfile.ZipFile(archive_path) as archive:
@@ -187,7 +190,7 @@ def _extract_archive(archive_path: Path, destination: Path) -> None:
     except (OSError, zipfile.BadZipFile) as error:
         raise RuntimeError(f"Unable to extract local UCI HAR archive: {error}") from error
 
-
+# Checks if the raw UCI HAR dataset is present in the specified directory by verifying the existence of required files.
 def _has_raw_dataset(dataset_dir: Path) -> bool:
     required = (
         dataset_dir / "train" / "y_train.txt",
@@ -196,7 +199,7 @@ def _has_raw_dataset(dataset_dir: Path) -> bool:
     )
     return all(path.is_file() for path in required)
 
-
+# Selects the specified channels from the official UCI HAR dataset and returns a dictionary containing the selected features, labels, and subjects for each split.
 def _select_channels(
     raw_dir: Path,
     official: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]],
@@ -211,7 +214,7 @@ def _select_channels(
         selected[split] = (signals, labels, subjects)
     return selected
 
-
+# Reads the specified channels' signals from the UCI HAR dataset for a given split and returns them as a stacked NumPy array.
 def _read_signals(split_dir: Path, split: str, channels: tuple[str, ...]) -> np.ndarray:
     axes = []
     expected_windows: int | None = None
@@ -228,13 +231,13 @@ def _read_signals(split_dir: Path, split: str, channels: tuple[str, ...]) -> np.
         axes.append(values)
     return np.stack(axes, axis=-1)
 
-
+# Reads a vector from a UCI HAR dataset file and returns it as a NumPy array of the specified dtype.
 def _read_vector(path: Path, dtype: type[np.generic]) -> np.ndarray:
     if not path.is_file():
         raise FileNotFoundError(f"Required UCI HAR metadata file is missing: {path}")
     return np.asarray(np.loadtxt(path, dtype=dtype)).reshape(-1)
 
-
+# Selects a subject-wise validation split from the official training set, ensuring that all six activities are present in both the training and validation splits.
 def _select_validation_subjects(
     labels: np.ndarray, subjects: np.ndarray, *, seed: int
 ) -> list[int]:
@@ -254,13 +257,13 @@ def _select_validation_subjects(
         f"for seed {seed}"
     )
 
-
+# Computes the mean and standard deviation of the training features across all windows and time steps, returning them as NumPy arrays.
 def _training_statistics(features: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     mean = features.mean(axis=(0, 1), dtype=np.float64).astype(np.float32)
     std = features.std(axis=(0, 1), dtype=np.float64).astype(np.float32)
     return mean, std
 
-
+# Validates the prepared split's features, labels, and subjects to ensure they meet the expected criteria for shape, counts, and values.
 def _validate_prepared_split(
     split: str,
     features: np.ndarray,
@@ -276,7 +279,7 @@ def _validate_prepared_split(
     if set(np.unique(labels)) != set(range(ACTIVITY_COUNT)):
         raise ValueError(f"The {split} split does not contain all six activities")
 
-
+# Validates that no subject appears in more than one data split (train, validation, test) to prevent data leakage.
 def _validate_no_subject_leakage(
     splits: dict[str, tuple[np.ndarray, np.ndarray, np.ndarray]]
 ) -> None:
@@ -286,7 +289,7 @@ def _validate_no_subject_leakage(
     if train_subjects & val_subjects or train_subjects & test_subjects or val_subjects & test_subjects:
         raise ValueError("A subject appears in more than one data split")
 
-
+# Main entry point for the script, handling command-line arguments and initiating the dataset preparation process.
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Download UCI HAR if needed and prepare Acc and Acc+Gyro NPZ files."
