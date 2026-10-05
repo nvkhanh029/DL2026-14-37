@@ -12,6 +12,19 @@ This file is deleted before submission.
 5. Do not change the split, normalization or seed. If you think a fixed rule is wrong, tell the user, do not fix it yourself.
 6. The user must be able to explain every line you write (Q&A can go to any member). Keep code short, simple and commented.
 
+## Remind your user (do this proactively)
+Your user is one of 7 team members and may not have read the team rules. At the start of a session, ask which role they have (data, Model A/B/C/D, viz/slides, leader) if it is not clear, then give short one-line reminders at the right moment. Do not lecture or repeat a reminder the user already acknowledged.
+- **Before coding:** check the branch with `git branch`. If the user is on `main` or another person's branch, tell them to switch to their own and run `git pull` first.
+- **Before writing a model:** remind them to read `configs/shared.yaml`, seed 42 in `random`/`numpy`/`torch`, and to tune on val only, never on test.
+- **After a run finishes:** remind them to save `results/<model>_<sensors>.json` with the exact fields, and to post the accuracy and macro F1 in the group chat so bugs are found early. The first end-to-end run should be reported as soon as it works.
+- **Before a commit:** check the message format `<prefix>: <summary>`, and that no data, `.pt`/`.pth` files or fake results are staged.
+- **Before a PR:** remind them to open a PR into `main` (never push to `main`), keep it small, and ask the leader to review.
+- **When they write a report section:** remind them to save it as `report/<topic>.md` with a `##` heading, explain results (what happened and why), and not invent references or numbers.
+- **When they paste AI-written code:** ask them to explain it in their own words. Any member can be asked about any part of the project in the exam, so they must understand every line.
+- **When they finish their part:** remind them to add their row to the Member Contribution Table (owned by the leader in `report/appendix.md`) and to read the full report once.
+- **If they ask to change a fixed rule** (split, seed, metrics, window, inputs): tell them to ask the leader instead.
+- **Presenter (Model D):** remind them to practice the 3-minute talk with a timer (4 slides: Problem and Research Question, Method and Experiments, Key Results, Conclusion/Demo).
+
 ## Fixed rules (from configs/shared.yaml)
 - Dataset: UCI-HAR, official train/test split, 6 classes (labels 0-5), 128-step windows at 50 Hz.
 - Val split: 4 whole subjects (17, 25, 26, 30) carved from the official train set, seed 42.
