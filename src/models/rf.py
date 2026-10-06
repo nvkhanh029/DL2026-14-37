@@ -3,7 +3,7 @@
 `python -m src.models.rf --sensors acc`
 `python -m src.models.rf --sensors acc_gyro`
 
-Need to run `python src/prepare_data.py` beforehand. No need to change `sys.path`
+Need to run `python src/prepare_data.py` beforehand. No need to change `sys.path`   
 
 Random Forest baseline for the UCI-HAR experiment.
 
@@ -264,7 +264,7 @@ def train_and_evaluate(
     # Training time means RF fitting time, not data-loading time.
     start = time.perf_counter()
     model.fit(X_train, y_train)
-    train_time_sec = time.perf_counter() - start
+    train_time_sec = round((time.perf_counter() - start), 4)
 
     # Validation evaluation.
     val_predictions = model.predict(X_val)
@@ -281,14 +281,14 @@ def train_and_evaluate(
     # Final test evaluation.
     test_predictions = model.predict(X_test)
 
-    test_accuracy = accuracy_score(y_test, test_predictions)
-    test_macro_f1 = f1_score(
+    test_accuracy = round(accuracy_score(y_test, test_predictions), 4)
+    test_macro_f1 = round(f1_score(
         y_test,
         test_predictions,
         average="macro",
         labels=np.arange(len(CLASS_NAMES)),
         zero_division=0,
-    )
+    ), 4)
 
     print()
     print(f"Random Forest: {sensors}")
