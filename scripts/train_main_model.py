@@ -172,7 +172,7 @@ def train_one(
     test_acc = accuracy_score(test_true, test_pred)
     test_f1 = f1_score(test_true, test_pred, average="macro")
 
-    # Optionally keep the best-validation weights (needed by src/demo.py).
+    # Optionally keep the best-validation weights (saved to checkpoints/ for later inference).
     if checkpoint_path is not None:
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(best_state, checkpoint_path)
