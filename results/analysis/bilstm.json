@@ -1,0 +1,108 @@
+{
+  "runs": [
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 42,
+      "accuracy": 0.888,
+      "macro_f1": 0.8883,
+      "epochs": 8,
+      "train_time_sec": 52.7,
+      "params": 308422
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 0,
+      "accuracy": 0.9036,
+      "macro_f1": 0.9034,
+      "epochs": 12,
+      "train_time_sec": 72.3,
+      "params": 308422
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 1,
+      "accuracy": 0.8992,
+      "macro_f1": 0.8987,
+      "epochs": 9,
+      "train_time_sec": 54.0,
+      "params": 308422
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 2,
+      "accuracy": 0.908,
+      "macro_f1": 0.9078,
+      "epochs": 9,
+      "train_time_sec": 52.1,
+      "params": 308422
+    },
+    {
+      "model": "cnn_bilstm",
+      "sensors": "acc_gyro",
+      "seed": 42,
+      "accuracy": 0.9087,
+      "macro_f1": 0.9074,
+      "epochs": 15,
+      "train_time_sec": 176.0,
+      "params": 704454
+    },
+    {
+      "model": "cnn_bilstm",
+      "sensors": "acc_gyro",
+      "seed": 0,
+      "accuracy": 0.9277,
+      "macro_f1": 0.9286,
+      "epochs": 16,
+      "train_time_sec": 189.9,
+      "params": 704454
+    },
+    {
+      "model": "cnn_bilstm",
+      "sensors": "acc_gyro",
+      "seed": 1,
+      "accuracy": 0.8887,
+      "macro_f1": 0.8886,
+      "epochs": 10,
+      "train_time_sec": 114.2,
+      "params": 704454
+    },
+    {
+      "model": "cnn_bilstm",
+      "sensors": "acc_gyro",
+      "seed": 2,
+      "accuracy": 0.8758,
+      "macro_f1": 0.8743,
+      "epochs": 7,
+      "train_time_sec": 84.7,
+      "params": 704454
+    }
+  ],
+  "summary": [
+    {
+      "model": "cnn_lstm",
+      "n_seeds": 4,
+      "params": 308422,
+      "accuracy_mean": 0.8997,
+      "accuracy_std": 0.0086,
+      "macro_f1_mean": 0.8996,
+      "macro_f1_std": 0.0084,
+      "epochs_mean": 9.5,
+      "train_time_sec_mean": 57.8
+    },
+    {
+      "model": "cnn_bilstm",
+      "n_seeds": 4,
+      "params": 704454,
+      "accuracy_mean": 0.9002,
+      "accuracy_std": 0.0228,
+      "macro_f1_mean": 0.8997,
+      "macro_f1_std": 0.0235,
+      "epochs_mean": 12.0,
+      "train_time_sec_mean": 141.2
+    }
+  ]
+}
