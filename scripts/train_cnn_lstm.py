@@ -163,10 +163,15 @@ def train_one(
     }
     out_path = results_dir / f"{name}_{sensors}.json"
     out_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-    np.savez_compressed(
-        results_dir / f"{name}_{sensors}_preds.npz", y_true=test_true, y_pred=test_pred
-    )
-    print(f"saved {out_path.relative_to(ROOT)}")
+
+    # Raw predictions live in their own subfolder so results/ only has JSON files.
+    preds_dir = results_dir / "preds"
+    preds_dir.mkdir(exist_ok=True)
+    # In the .npz: y_true = true test label, y_pred = predicted label (one int per window).
+    preds_path = preds_dir / f"{name}_{sensors}_preds.npz"
+    np.savez_compressed(preds_path, y_true=test_true, y_pred=test_pred)
+
+    print(f"saved {out_path.relative_to(ROOT)} and {preds_path.relative_to(ROOT)}")
     return result
 
 
