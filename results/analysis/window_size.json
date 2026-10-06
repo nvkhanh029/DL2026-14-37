@@ -1,0 +1,206 @@
+{
+  "runs": [
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 42,
+      "window_size": 16,
+      "accuracy": 0.9243,
+      "macro_f1": 0.9244,
+      "epochs": 8,
+      "train_time_sec": 107.8
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 0,
+      "window_size": 16,
+      "accuracy": 0.9253,
+      "macro_f1": 0.9246,
+      "epochs": 8,
+      "train_time_sec": 111.7
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 1,
+      "window_size": 16,
+      "accuracy": 0.9281,
+      "macro_f1": 0.928,
+      "epochs": 11,
+      "train_time_sec": 199.9
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 2,
+      "window_size": 16,
+      "accuracy": 0.9104,
+      "macro_f1": 0.9111,
+      "epochs": 9,
+      "train_time_sec": 114.9
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 42,
+      "window_size": 32,
+      "accuracy": 0.8992,
+      "macro_f1": 0.899,
+      "epochs": 7,
+      "train_time_sec": 68.4
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 0,
+      "window_size": 32,
+      "accuracy": 0.9304,
+      "macro_f1": 0.9318,
+      "epochs": 24,
+      "train_time_sec": 242.6
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 1,
+      "window_size": 32,
+      "accuracy": 0.9006,
+      "macro_f1": 0.9002,
+      "epochs": 7,
+      "train_time_sec": 79.2
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 2,
+      "window_size": 32,
+      "accuracy": 0.9209,
+      "macro_f1": 0.9201,
+      "epochs": 11,
+      "train_time_sec": 92.4
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 42,
+      "window_size": 64,
+      "accuracy": 0.9233,
+      "macro_f1": 0.9237,
+      "epochs": 21,
+      "train_time_sec": 166.4
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 0,
+      "window_size": 64,
+      "accuracy": 0.9376,
+      "macro_f1": 0.9383,
+      "epochs": 24,
+      "train_time_sec": 163.0
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 1,
+      "window_size": 64,
+      "accuracy": 0.9264,
+      "macro_f1": 0.9261,
+      "epochs": 8,
+      "train_time_sec": 53.4
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 2,
+      "window_size": 64,
+      "accuracy": 0.9165,
+      "macro_f1": 0.9166,
+      "epochs": 11,
+      "train_time_sec": 84.6
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 42,
+      "window_size": 128,
+      "accuracy": 0.888,
+      "macro_f1": 0.8883,
+      "epochs": 8,
+      "train_time_sec": 50.8
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 0,
+      "window_size": 128,
+      "accuracy": 0.9036,
+      "macro_f1": 0.9034,
+      "epochs": 12,
+      "train_time_sec": 71.9
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 1,
+      "window_size": 128,
+      "accuracy": 0.8992,
+      "macro_f1": 0.8987,
+      "epochs": 9,
+      "train_time_sec": 53.3
+    },
+    {
+      "model": "cnn_lstm",
+      "sensors": "acc_gyro",
+      "seed": 2,
+      "window_size": 128,
+      "accuracy": 0.908,
+      "macro_f1": 0.9078,
+      "epochs": 9,
+      "train_time_sec": 54.9
+    }
+  ],
+  "summary": [
+    {
+      "window_size": 16,
+      "n_seeds": 4,
+      "accuracy_mean": 0.922,
+      "accuracy_std": 0.0079,
+      "macro_f1_mean": 0.922,
+      "macro_f1_std": 0.0075,
+      "epochs_mean": 9.0,
+      "train_time_sec_mean": 133.6
+    },
+    {
+      "window_size": 32,
+      "n_seeds": 4,
+      "accuracy_mean": 0.9128,
+      "accuracy_std": 0.0154,
+      "macro_f1_mean": 0.9128,
+      "macro_f1_std": 0.016,
+      "epochs_mean": 12.2,
+      "train_time_sec_mean": 120.7
+    },
+    {
+      "window_size": 64,
+      "n_seeds": 4,
+      "accuracy_mean": 0.926,
+      "accuracy_std": 0.0088,
+      "macro_f1_mean": 0.9262,
+      "macro_f1_std": 0.009,
+      "epochs_mean": 16.0,
+      "train_time_sec_mean": 116.8
+    },
+    {
+      "window_size": 128,
+      "n_seeds": 4,
+      "accuracy_mean": 0.8997,
+      "accuracy_std": 0.0086,
+      "macro_f1_mean": 0.8996,
+      "macro_f1_std": 0.0084,
+      "epochs_mean": 9.5,
+      "train_time_sec_mean": 57.7
+    }
+  ]
+}
