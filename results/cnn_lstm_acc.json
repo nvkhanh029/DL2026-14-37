@@ -1,0 +1,9 @@
+{
+  "model": "cnn_lstm",
+  "sensors": "acc",
+  "seed": 42,
+  "accuracy": 0.8809,
+  "macro_f1": 0.8823,
+  "epochs": 9,
+  "train_time_sec": 38.1
+}
