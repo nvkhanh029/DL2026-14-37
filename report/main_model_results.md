@@ -1,8 +1,8 @@
 ## 5. Main Model Results
 
-> **Status: complete.** The reported results are based on the two seed-42 runs stored in `results/cnn_lstm_acc.json` and `results/cnn_lstm_acc_gyro.json`.
+> **Status: complete.** The reported results are the two seed-42 runs in `results/cnn_lstm_acc.json` and `results/cnn_lstm_acc_gyro.json`.
 >
-> To reproduce the results from scratch:
+> To reproduce them from scratch:
 >
 > ```bash
 > pip install -r requirements.txt
@@ -10,24 +10,24 @@
 > python scripts/train_main_model.py      # Acc + Acc+Gyro, seed 42 -> results/cnn_lstm_*.json
 > ```
 >
-> An optional robustness sweep using seeds 0, 1, and 2 is written to `results/robustness/` by running `python scripts/train_main_model.py --robustness`. These runs are not used as the reported results.
+> `python scripts/train_main_model.py --robustness` runs the optional sweep over seeds 0, 1 and 2 and writes it to `results/robustness/`. Those runs are not part of the reported results.
 
 ### 5.1 Setup
 
-The main model described in Section 4 (CNN-LSTM, Table 3) was trained using the two input versions from Table 4 and the shared training protocol from Section 4.4. The protocol uses seed 42, Adam with a learning rate of 1e-3, a batch size of 64, a maximum of 30 epochs, and early stopping based on validation macro-F1 with a patience of 6 epochs.
+We trained the CNN-LSTM from Section 4 (Table 3) on both input versions in Table 4, using the shared protocol from Section 4.4: seed 42, Adam with a learning rate of 1e-3, batch size 64, at most 30 epochs, and early stopping on validation macro-F1 with a patience of 6 epochs.
 
-Each reported result is from a single seed-42 run. The seed determines weight initialisation and batch ordering. The train/validation subject split, however, is fixed once by `src/prepare_data.py` using `--val-seed 42` and is reused for all runs. The test set is the official UCI test partition, consisting of 9 subjects that are not used for training. It is evaluated once per run using the checkpoint selected on the validation split.
+Each result in Table M1 is one seed-42 run on machine D. The seed fixes the weight initialisation and the batch order, which makes the run repeat itself on the same machine and software, though not exactly on other machines (Section 5.3). The train/validation subject split is made once by `src/prepare_data.py` with `--val-seed 42` and is the same for every run. The test set is the official UCI test partition: 9 subjects that the model never sees during training. It is evaluated once per run, with the checkpoint chosen on validation.
 
-**Table M1.** Main model (CNN-LSTM), with one seed-42 run for each input version.
+**Table M1.** Main model (CNN-LSTM), one seed-42 run per input version.
 
 | Version | Channels | Test acc (%) | Macro-F1 (%) | Params | Epochs | Train time (s) |
 |---|---:|---:|---:|---:|---:|---:|
 | Acc | 3 | 88.09 | 88.23 | 307,462 | 9 | 38 |
 | Acc+Gyro | 6 | 91.99 | 92.05 | 308,422 | 23 | 101 |
 
-*Epochs* is the number of epochs run, including the 6 patience epochs after the best validation macro-F1 (the best checkpoint is therefore 6 epochs earlier: epoch 3 for Acc and epoch 17 for Acc+Gyro).
+*Epochs* counts every epoch that was run, including the 6 patience epochs after the best validation macro-F1. The restored checkpoint is therefore from epoch 3 for Acc and epoch 17 for Acc+Gyro.
 
-**Table M2.** Robustness results for the same model and protocol using seeds 0, 1, and 2. These runs are **not** the reported results; seed 42 remains the fixed reporting seed. The additional runs are used only to estimate variation caused by initialisation and batch shuffling. They were run on a different machine from Table M1, so they should not be compared directly with the Table M1 numbers; only their spread is used.
+**Table M2.** The same model and protocol with seeds 0, 1 and 2. These runs are not the reported results; seed 42 stays the reporting seed, and the sweep is only there to show how much initialisation and batch order move the numbers. It was run on a different machine (C) from Table M1, so its values should not be compared one-to-one with Table M1. Only the spread is used.
 
 | Version | Seed 0 | Seed 1 | Seed 2 | Mean ± SD |
 |---|---:|---:|---:|---:|
@@ -36,28 +36,28 @@ Each reported result is from a single seed-42 run. The seed determines weight in
 
 ### 5.2 Interpretation of the Results
 
-**Effect of adding gyroscope data.** The Acc+Gyro model achieves 91.99% test accuracy compared with 88.09% for the Acc-only model, an improvement of 3.9 percentage points. This is roughly seven to eight times the seed-to-seed standard deviation of about 0.5 percentage points in Table M2, so the gain is larger than run-to-run noise and the gyroscope clearly helps this model.
+**The gyroscope helps.** With Acc+Gyro the model reaches 91.99% test accuracy, against 88.09% with the accelerometer alone, a gain of 3.9 percentage points. The seed sweep in Table M2 moves by only about half a point, so the gain is seven to eight times larger than the run-to-run noise. Rotation adds real information for this model.
 
-The comparison also involves a small change in model size because adding three input channels increases the parameter count from 307,462 to 308,422. Consequently, the experiment does not isolate the information content of the gyroscope perfectly, and the gain is attributed to the added channels with that small caveat.
+One small caveat remains. Three extra input channels also add a few weights to the first convolution (308,422 parameters instead of 307,462), so the experiment does not isolate the gyroscope's information perfectly. Given how small that change is, we attribute the gain to the extra channels.
 
-**Comparison with the baseline models.** On the Acc+Gyro input, the plain 1D-CNN achieves 91.31% accuracy, while the standalone LSTM achieves 89.35%. The CNN-LSTM achieves 91.99%, about 0.7 percentage points above the CNN and about 2.6 points above the LSTM.
+**The CNN-LSTM and the plain CNN are level.** On Acc+Gyro, the plain 1D-CNN reaches 91.31% and the standalone LSTM 89.35%. The CNN-LSTM's 91.99% is about 0.7 points above the CNN and about 2.6 points above the LSTM.
 
-The difference between the CNN-LSTM and the plain CNN is below one percentage point and close to the seed-to-seed spread of about 0.5 points. The two models are therefore treated as **comparable**, and no win is claimed for the CNN-LSTM over the CNN. The LSTM is clearly behind both on this dataset.
+*Note:* the CNN and LSTM numbers come from machine B and the CNN-LSTM numbers from machine D, so the 0.7-point gap is also a comparison across machines.
 
-**Convergence.** Training stopped after 9 epochs for Acc and 23 epochs for Acc+Gyro, both below the 30-epoch maximum. The epoch counts include the 6 patience epochs: in each case, validation macro-F1 had stopped improving for six consecutive epochs, triggering early stopping. The validation performance had therefore plateaued before the epoch budget was exhausted, indicating that the reported results were not limited by the maximum number of training epochs.
+A gap of less than one point, close to the half-point seed spread and measured across two machines, is not enough to rank the two models. We treat the CNN-LSTM and the CNN as comparable and do not claim that the recurrent stage improves accuracy on this dataset. It may still be modelling temporal order, but this experiment cannot show a benefit from it. The LSTM on its own, on the other hand, falls clearly behind both.
 
-**Accuracy versus computational cost.** Table M1 reports parameter count and training time alongside the accuracy metrics. The CNN-LSTM has about 0.31 million parameters, fewer than the 1D-CNN (about 0.57 million), and the LSTM is the slowest of the three to train (447 s). The CNN-LSTM is therefore not the most expensive model by either measure. Training times come from different runs and machines, so they are indicative only. Because the CNN-LSTM is about 0.7 points ahead of the CNN with fewer parameters, it is a reasonable choice, but the accuracy gap is too small to call it better.
+**Training stopped well before the limit.** The Acc run stopped after 9 epochs and the Acc+Gyro run after 23, both short of the 30-epoch maximum. These counts include the 6 patience epochs: in both runs, validation macro-F1 had not improved for six epochs in a row, which triggered early stopping. Validation performance had levelled off before the budget ran out, so the epoch limit did not hold the results back.
+
+**Accuracy and cost.** The CNN-LSTM has about 0.31 million parameters, fewer than the 1D-CNN (about 0.57 million), and the LSTM is by far the slowest to train (447 s). On neither measure is the CNN-LSTM the most costly of the three. The training times come from different machines and runs and are indicative only. The CNN-LSTM is a sensible choice, as it matches the CNN with roughly half the parameters, but the accuracy gap is too small to call it the better model.
 
 ### 5.3 Limitations
 
-The following limitations should be considered when interpreting the results.
-
-- **Limited number of training subjects.** The dataset contains six classes and only 21 training subjects. The validation split holds out 4 subjects, leaving 17 subjects for model fitting and most of the 7,352 official training windows. This is a relatively small-data setting, so differences of one or two percentage points should not be treated as decisive evidence of superiority.
-- **Subject-level variability is not analysed in detail.** The evaluation is performed on unseen subjects, but accuracy is not reported separately for each test subject. A model with a strong overall average could still perform poorly for particular individuals, and the current aggregate results do not reveal this. With only 9 test subjects, a per-subject accuracy analysis would be a useful extension if time permits.
-- **Fixed window length.** The input window is fixed at 128 samples because the experiment uses the dataset's provided windows. Therefore, the results do not establish how performance would change with different window lengths. This is a limitation of working directly with the supplied windows rather than re-segmenting the original continuous signals.
-- **No data augmentation.** As documented in `DATA.md`, no augmentation is applied. For a subject-generalisation task, techniques such as jittering or rotation could be promising sources of further improvement.
-- **Limited robustness evaluation.** The reporting protocol uses a single fixed seed, 42, so the headline results are based on one run per input version. The additional sweep over seeds 0, 1, and 2 shows a standard deviation of roughly half a percentage point. This is enough to show that the 3.9-point gyroscope improvement is well above run-to-run noise, but it is not enough to resolve differences of only a few tenths of a percentage point, such as the CNN-LSTM versus CNN gap.
-- **Reproducibility across hardware.** The random seeds fix the Python, NumPy, and PyTorch random-number generators, but GPU implementations can still contain non-deterministic operations. A repeated run may therefore differ slightly. The Table M1 results were obtained on a single CPU machine, and the Table M2 robustness runs on a different machine, so training-time comparisons across different hardware should be considered indicative rather than absolute.
+- **Few training subjects.** The dataset has only 21 training subjects. Four are held out for validation, which leaves 17 subjects and 5,800 windows for fitting. In a setting this small, a difference of one or two points between models should not be read as decisive.
+- **No per-subject breakdown here.** The test subjects are unseen, but this section reports only the average over all of them. A model with a good average can still do badly for particular people, and these aggregate numbers would not show it. With only 9 test subjects, accuracy per subject is the obvious next check; the error analysis section takes it up.
+- **Fixed window length.** We use the 128-sample windows supplied with the dataset, so these results say nothing about other window lengths. Testing longer windows would require re-segmenting the raw continuous signals.
+- **No data augmentation.** As `DATA.md` states, no augmentation is applied. Because the task is to generalise to new people, jittering or small rotations of the signal would be natural things to try next.
+- **One reporting seed.** The headline numbers come from one run per input version. The sweep over seeds 0, 1 and 2 has a standard deviation of about half a point. That is enough to show that the 3.9-point gyroscope gain is real, but not enough to separate models that differ by a few tenths of a point, such as the CNN-LSTM and the CNN.
+- **Reproducibility across hardware.** Seeding Python, NumPy and PyTorch makes a run repeat itself on the same machine and software, but not exactly on another one. A different CPU or GPU, PyTorch version or thread count can change the numerical path, and some GPU operations are not deterministic. Table M1 was produced on one CPU machine (D), Table M2 on another (C), and the CNN/LSTM baselines on a third (B). Any comparison across these machines carries that extra uncertainty, and the training times are indicative only.
 
 ### References for This Section
 
