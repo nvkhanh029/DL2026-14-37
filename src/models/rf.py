@@ -1,4 +1,10 @@
-"""
+"""To run this file from the origin repo folder:
+
+`python -m src.models.rf --sensors acc`
+`python -m src.models.rf --sensors acc_gyro`
+
+Need to run `python src/prepare_data.py` beforehand. No need to change `sys.path`
+
 Random Forest baseline for the UCI-HAR experiment.
 
 This script assumes the project's shared data loader already handles:
@@ -34,7 +40,6 @@ import json
 import random
 import time
 from pathlib import Path
-import torch
 import numpy as np
 import yaml
 from sklearn.ensemble import RandomForestClassifier
@@ -87,7 +92,6 @@ def seed_everything(seed: int) -> None:
     """Set the project's Python and NumPy random seeds."""
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
 
 # ---------------------------------------------------------------------------
 # Handcrafted feature extraction
@@ -380,7 +384,7 @@ def main() -> None:
         from ..data import load_data
     except ImportError as exc:
         raise ImportError(
-            "Could not import load_data from data_loader.py.\n"
+            "Could not import load_data from src/data.py.\n"
             "Expected interface:\n\n"
             "    load_data(sensors)\n\n"
             "The shared data-loader implementation is not part of this "
