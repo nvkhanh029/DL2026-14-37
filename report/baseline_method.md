@@ -11,4 +11,5 @@ The preprocessed data are represented as windows of 128 samples. The official tr
 ### 5.1 Baseline Method: Random Forest
 
 Random Forest (RF) is an ensemble learning method that combines the predictions of multiple decision trees, each tree is trained using a randomized subset of the training data and features, and the final prediction is determined by aggregating the predictions of the individual trees. Unlike the deep-learning models evaluated in the main experiment, the Random Forest classifier does not directly operate on the temporal sequence of sensor samples; therefore, handcrafted statistical features were extracted from each 128-sample sensor window before classification.
+
 $$\mu=\frac{1}{T}\sum_{t=1}^{T}x_t$$
