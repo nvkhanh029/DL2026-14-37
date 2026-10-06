@@ -54,7 +54,9 @@ whole window it summarizes the activity trajectory. The model has about
 - **Batch size:** 64 (training batches shuffled; validation/test in fixed order).
 - **Epochs:** at most 30, with early stopping after 6 epochs without
   improvement in validation macro-F1; the checkpoint with the best validation
-  macro-F1 is kept.
+  macro-F1 is kept. The `epochs` value in each result file is the number of
+  epochs actually run, **including** those last 6 patience epochs that brought
+  no improvement, so the saved checkpoint comes from an earlier epoch.
 - **Seeding:** seed 42 for `random`, `numpy`, and `torch` before each run.
 - **Model selection:** validation split only (subjects 17, 25, 26, 30). The
   test split is evaluated exactly once, after training is finished.
@@ -85,16 +87,17 @@ and CNN-LSTM is made in their sections. The CNN (0.9131 accuracy, 0.9125
 macro-F1) is about 2 points ahead of the LSTM (0.8935 accuracy,
 0.8936 macro-F1), while using roughly three times more parameters
 (0.57 M vs 0.20 M). Both runs stopped early (CNN after 9, LSTM after 14 of
-the 30 allowed epochs), which means validation macro-F1 stopped improving
-long before the epoch budget and there is no sign that either model was
-still learning on the training split.
+the 30 allowed epochs — those counts include the 6 patience epochs that brought
+no improvement), which means validation macro-F1 stopped improving long before
+the epoch budget and there is no sign that either model was still learning on
+the training split.
 
 **Where the errors are.** The two confusion matrices show the same picture.
 Both models classify `LAYING` perfectly (recall 1.000) and are strong on the
 three dynamic activities — walking, walking upstairs and walking downstairs —
 with recalls between 0.87 and 0.99. The largest error cluster is the swap
 between the two static postures `SITTING` and `STANDING`: 149 of the CNN's 256
-test errors and 192 of the LSTM's 315 are that single confusion. This is
+test errors and 192 of the LSTM's 314 are that single confusion. This is
 expected, because the two activities share the same body orientation and
 differ mainly in fine acceleration structure rather than in gross motion. The
 second cluster is `WALKING` vs `WALKING_DOWNSTAIRS`, where both models
