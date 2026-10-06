@@ -92,6 +92,7 @@ def train_one(
     learning_rate: float,
     batch_size: int,
     out_path: Path,
+    preds_path: Path | None = None,
 ) -> dict:
     """Train and evaluate one run: CNN-LSTM x sensor version x seed.
 
@@ -159,6 +160,13 @@ def train_one(
     test_acc = accuracy_score(test_true, test_pred)
     test_f1 = f1_score(test_true, test_pred, average="macro")
 
+    # Save the test predictions (true and predicted labels for the 2,947 test
+    # windows) so the analysis/visualization person can build confusion matrices
+    # without re-training. Saved for every reported run.
+    if preds_path is not None:
+        preds_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(preds_path, y_true=test_true, y_pred=test_pred)
+
     result = {
         "model": "cnn_lstm",
         "sensors": sensors,
@@ -173,6 +181,8 @@ def train_one(
     print(f"  val macro-F1 {best_val_f1:.4f} | test acc {test_acc:.4f} | "
           f"macro-F1 {test_f1:.4f} | {epochs_run} epochs | {train_time:.0f}s")
     print(f"  saved -> {out_path.relative_to(ROOT)}")
+    if preds_path is not None:
+        print(f"  saved -> {preds_path.relative_to(ROOT)}")
     return result
 
 
@@ -212,6 +222,7 @@ def main() -> None:
             epochs=args.epochs, patience=args.patience,
             learning_rate=args.lr, batch_size=args.batch_size,
             out_path=results_dir / f"cnn_lstm_{sensors}.json",
+            preds_path=results_dir / "preds" / f"cnn_lstm_{sensors}_preds.npz",
         )
 
 
