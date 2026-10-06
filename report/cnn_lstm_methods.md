@@ -75,10 +75,10 @@ CNN-LSTM hybrid combines both ideas.
 
 | Model | Sensors | Accuracy | Macro-F1 |
 |---|---|---|---|
-| Random Forest (baseline) | acc_gyro | *(see Baseline section)* | *(see Baseline section)* |
+| Random Forest (baseline) | acc_gyro | 0.8039 | 0.8016 |
 | **CNN (ours)** | acc_gyro | 0.9131 | 0.9125 |
 | **LSTM (ours)** | acc_gyro | 0.8935 | 0.8936 |
-| CNN-LSTM (main model) | acc_gyro | *(see Main Model section)* | *(see Main Model section)* |
+| CNN-LSTM (main model) | acc_gyro | 0.9199 | 0.9205 |
 
 **What we observe.** Both learned models reach about 0.9 accuracy on the
 unseen test subjects, so replacing hand-crafted features with learned

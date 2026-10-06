@@ -98,7 +98,7 @@ cd DL2026-Group14-Project37
 pip install -r requirements.txt
 python src/prepare_data.py                        # download UCI HAR and build acc.npz + acc_gyro.npz
 python scripts/train_main_model.py                # Acc + Acc+Gyro, seed 42 -> results/cnn_lstm_*.json
-python scripts/train_main_model.py --save-model   # also save checkpoints/cnn_lstm_<sensors>.pt for src/demo.py (re-trains, see below)
+python scripts/train_main_model.py --save-model   # also save checkpoints/cnn_lstm_<sensors>.pt (re-trains, see below)
 python scripts/train_main_model.py --robustness   # optional: seeds 0, 1, 2 -> results/robustness/
 ```
 
