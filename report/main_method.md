@@ -28,19 +28,22 @@ computational cost of the recurrence by a factor of four, while the steps are st
 that a single step, which lasts roughly 25–35 samples (0.5–0.7 s), is still spread over several of
 them.
 
-The two halves are not chosen arbitrarily. The convolutional front end keeps the kernel width,
-channel widths, and layer order (`Conv1d → BatchNorm → ReLU → MaxPool`) of the 1D-CNN already
-implemented for this project, and the recurrent back end keeps the hidden size, depth, dropout
-and last-step readout of the standalone LSTM. The main model is thus a strict superset of the two
-baselines: any difference in accuracy is attributable to the fusion rather than to a change of
-capacity in one branch, which is what makes the comparison in Section 5 interpretable.
+The two halves are not chosen arbitrarily. The convolutional front end follows the same
+`Conv1d → ReLU → MaxPool` motif, the same kernel width and the same first two channel widths as
+the plain 1D-CNN baseline, but inserts BatchNorm after each convolution so that the LSTM receives
+well-scaled inputs. The recurrent back end follows the standalone LSTM: hidden size 128, two
+layers and the same last-step readout, with dropout 0.3 instead of the baseline's 0.5. The main
+model is therefore *not* a strict superset of the two baselines — it adds BatchNorm and uses its
+own dropout — but the two branches keep comparable capacity, so a difference in accuracy can be
+read as a property of the fusion rather than of a much larger network. All three models also share
+one training protocol (Section 4.4), so the comparison in Section 5 is not confounded by the recipe.
 
 The parameter counts in Table M1 show where the capacity sits. For the Acc input the model has
 307,462 parameters, of which the convolutional front end holds 42,496 (14%), the LSTM 264,192
 (86%), and the linear head 774. The model is therefore dominated by the recurrent branch, not
 evenly balanced between the two. That is a consequence of the design above rather than an accident:
-a 2-layer LSTM with 128 hidden units is expensive relative to two narrow convolutions, and matching
-the standalone LSTM's capacity is what makes the comparison against that baseline meaningful. The
+a 2-layer LSTM with 128 hidden units is expensive relative to two narrow convolutions, and reusing
+the standalone LSTM's hidden size and depth keeps the recurrence comparable to that baseline. The
 practical consequence is that training time is dominated by the recurrence, so the front end's
 4x reduction of the sequence length is what keeps the model affordable at all.
 
@@ -96,53 +99,50 @@ model.
 
 ### 4.4 Training protocol
 
-The main model is trained by a single model-agnostic loop, so the same hyper-parameters below apply
-to the baselines unchanged and a comparison is not confounded by the training recipe.
+The main model is trained with the same hyper-parameters as the CNN and LSTM baselines, so a
+comparison between the three is not confounded by the training recipe. The settings below are the
+shared ones.
 
-**Table 5.** Training hyper-parameters, identical for every model and sensor version.
+**Table 5.** Training hyper-parameters, shared by the CNN, LSTM and CNN-LSTM models.
 
 | Setting | Value |
 |---|---|
 | Optimiser | Adam |
 | Learning rate | 1e-3 |
-| Weight decay | 1e-4 |
 | Batch size | 64 |
-| Max epochs | 40 |
-| LR schedule | `ReduceLROnPlateau`, factor 0.5, patience 3, on validation loss |
-| Gradient clipping | Global norm 1.0 |
+| Max epochs | 30 |
 | Loss | Cross-entropy |
-| Early stopping | Validation accuracy, patience 8 epochs |
-| Model selection | Best validation accuracy; ties broken by lower validation loss |
-| Seeds | 0, 1, 2 (mean ± standard deviation reported) |
+| Early stopping | Validation macro-F1, patience 6 epochs |
+| Model selection | Best validation macro-F1, restored before the test evaluation |
+| Seed | 42 (fixed by `configs/shared.yaml`) |
 
-Each seed controls the weight initialisation and the batch shuffling. It does **not** re-draw the
-train/validation subject split: that is chosen once by `src/prepare_data.py` at `--val-seed 42` and
-reused by every run (see DATA.md). The reported standard deviation therefore measures
-initialisation and shuffling variance only; it is a lower bound on the true run-to-run spread,
-because it omits the variance a different subject-level split would introduce. With 21 training
-subjects that omitted term is plausibly the larger of the two.
+Seed 42 is fixed by `configs/shared.yaml` and is set for `random`, NumPy and PyTorch before each
+run. It controls the weight initialisation and the batch shuffling; it does **not** re-draw the
+train/validation subject split, which is chosen once by `src/prepare_data.py` at `--val-seed 42`
+and reused by every run (see DATA.md). The reported result is a single seed-42 run per input
+version; Section 5 additionally lists an extra three-seed sweep (seeds 0, 1, 2) as a robustness
+check on initialisation and shuffling variance. That spread is a lower bound on the true
+run-to-run variability, because it omits the variance a different subject-level split would
+introduce.
 
-Gradient clipping at norm 1.0 is applied on every step; the recurrent part of the model is the part
-most at risk of exploding gradients, and clipping removes that failure mode without needing to
-lower the learning rate.
-
-Early stopping monitors **validation accuracy**, not validation loss. Loss keeps improving after
-the accuracy has plateaued, so stopping on loss would routinely train past the point where the
-model generalises best. Because the official test set must not be consulted for model selection,
-the weights from the best validation epoch are restored before the single test evaluation.
+Early stopping and model selection monitor **validation macro-F1**, not accuracy or loss.
+Macro-F1 weights the six classes equally, so a class the model is failing cannot be hidden by the
+three large dynamic classes — which is exactly the failure mode early stopping should guard
+against. Because the official test set must not be consulted for model selection, the weights from
+the best validation epoch are restored before the single test evaluation.
 
 ### 4.5 Evaluation protocol
 
-Metrics are test accuracy and macro-averaged F1, plus per-class recall from the confusion matrix.
-Accuracy is the headline number because it matches the benchmark convention for this dataset;
-macro-F1 is reported next to it so that performance cannot be carried by the three dynamic
-classes while a static class fails.
+Metrics are test accuracy and macro-averaged F1. Accuracy is the headline number because it
+matches the benchmark convention for this dataset; macro-F1 is reported next to it so that
+performance cannot be carried by the three dynamic classes while a static class fails.
 
 Splits follow `DATA.md`: the official test subjects are untouched until the final evaluation of a
 run, normalisation statistics come from the training windows only, and each run touches the test
-set exactly once, after early stopping has selected the checkpoint. Every reported figure is a mean
-over three seeds with the sample standard deviation, and per-seed values are listed in Table M2 so
-the spread can be inspected rather than taken on trust.
+set exactly once, after early stopping has selected the checkpoint. The reported result is a single
+seed-42 run per input version, matching the fixed seed in `configs/shared.yaml`; Section 5
+additionally lists an extra three-seed sweep as a robustness check, kept separate from the reported
+numbers.
 
 Training time is measured on the same machine for all runs and is reported next to the parameter
 count, because the fusion model is the most expensive of the three and the accuracy it buys has
@@ -150,48 +150,34 @@ to be weighed against that cost.
 
 ### 4.6 Implementation
 
-The model is implemented in PyTorch, one file per model, under `src/models/`:
+The model is implemented in PyTorch under `src/models/`. The main model is
+`src/models/cnn_lstm.py`; the CNN and LSTM baselines are `src/models/cnn.py` and
+`src/models/lstm.py` respectively and are owned and reported by the CNN/LSTM section of the
+report. Each file defines one architecture only.
 
-| File | Model |
-|---|---|
-| `src/models/main_model.py` | the main CNN-LSTM of Table 3 |
-| `src/models/cnn_baseline.py` | 1D CNN baseline |
-| `src/models/lstm_baseline.py` | LSTM baseline |
-
-The CNN and the LSTM were originally implemented earlier in the project inside a single shared
-module that also contained a GRU, an early 1-layer CNN-LSTM prototype and a Transformer. For this
-deliverable the CNN and the LSTM are split into their own files so that each can be read, run and
-cited on its own. An earlier 1-layer CNN-LSTM prototype was deliberately not adopted as the main
-model: with fewer recurrent layers than the LSTM baseline it would have been a weaker model, and
-the comparison would have answered a different question than the one Section 5 asks.
-
-`train_and_evaluate` in `src/train.py` takes the model as an argument and contains no
-model-specific logic, so a baseline can be run through exactly the same loop and the same
-hyper-parameters as the main model by passing a different module. The baseline files therefore
-define architecture only; the training recipe of Section 4.4 is shared rather than re-implemented.
-As shipped, the command-line entry point wires up the main model, since that is what this section
-reports.
+The CNN-LSTM is trained by `scripts/train_main_model.py`. It is deliberately kept in `scripts/`
+rather than `src/train.py`, because `src/train.py` is the leader's shared-trainer stub. The script
+reads the seed and the result paths from `configs/shared.yaml` and uses the same settings as the
+CNN/LSTM harness (`scripts/train_cnn_lstm.py`), so the training recipe of Section 4.4 is shared
+rather than re-implemented per model. It has no model-specific logic beyond instantiating
+`CNNLSTM`, so a baseline can be run through the same code by passing a different module.
 
 ### 4.7 Reproducing this section
 
 ```bash
 cd dl-data
 pip install -r requirements.txt
-python src/prepare_data.py           # download UCI HAR and build acc.npz + acc_gyro.npz
-python src/train.py                  # Acc and Acc+Gyro x 3 seeds -> results/main/runs/*.json
-python src/report_main_model.py      # Tables M1-M3 -> report/, Figures M1-M4 -> figures/
+python src/prepare_data.py                 # download UCI HAR and build acc.npz + acc_gyro.npz
+python scripts/train_main_model.py         # Acc + Acc+Gyro, seed 42 -> results/cnn_lstm_*.json
+python scripts/train_main_model.py --robustness   # optional: seeds 0, 1, 2 -> results/robustness/
 ```
 
 `src/prepare_data.py` writes the two processed datasets and is the only step that needs network
-access. For a quick check that the pipeline runs before committing to the full grid:
+access. To confirm the pipeline runs before committing to a run, use `--epochs 3` with a single
+input version; that is a smoke test and its numbers are not reportable.
 
-```bash
-python src/train.py --fast           # 15 epochs, one seed: a smoke test, not reportable
-```
-
-Regenerating the report is idempotent: it replaces only the block between the GENERATED markers, so
-the prose in `report/main_model_results.md` is never overwritten by a re-run. All paths resolve
-relative to the project root, so the commands behave identically from any working directory.
+All paths resolve relative to the project root, so the commands behave identically from any
+working directory.
 
 ### References for this section
 * D. Anguita, A. Ghio, L. Oneto, X. Parra, and J. L. Reyes-Ortiz, "A public domain dataset for

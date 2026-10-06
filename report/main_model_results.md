@@ -1,104 +1,67 @@
 ## 5. Main Model Results
 
-> **Status: results are complete.** The six runs (Acc and Acc+Gyro x seeds 0, 1, 2) are in
-> `results/main/runs/`, and Tables M1-M3 with Figures M1-M4 below were generated from them.
-> To reproduce from scratch:
+> **Status: complete.** The reported numbers are the two seed-42 runs in
+> `results/cnn_lstm_acc.json` and `results/cnn_lstm_acc_gyro.json`. To reproduce from scratch:
 > ```bash
 > pip install -r requirements.txt
-> python src/prepare_data.py       # download UCI HAR and build acc.npz + acc_gyro.npz
-> python src/train.py              # Acc + Acc+Gyro x 3 seeds -> results/main/runs/
-> python src/report_main_model.py  # refreshes Tables M1-M3 and Figures M1-M4 below
+> python src/prepare_data.py              # download UCI HAR and build acc.npz + acc_gyro.npz
+> python scripts/train_main_model.py      # Acc + Acc+Gyro, seed 42 -> results/cnn_lstm_*.json
 > ```
-> `python src/train.py --fast` runs a cheaper smoke test into `results/main_fast/` if you only
-> want to confirm the pipeline works; it is deliberately kept out of the reported tables.
+> An optional robustness sweep over seeds 0, 1 and 2 is written to `results/robustness/` with
+> `python scripts/train_main_model.py --robustness`; it is not the reported result.
 
 ### 5.1 Setup
 
 The main model of Section 4 (CNN-LSTM, Table 3) was trained on the two input versions of Table 4
-under the protocol of Section 4.4: Adam, learning rate 1e-3, weight decay 1e-4, batch size 64, at
-most 40 epochs, early stopping on validation accuracy with patience 8, three seeds (0, 1, 2). Each
-row below is therefore a mean over three independent runs, where a seed re-draws the weight
-initialisation and the batch order.
+under the shared protocol of Section 4.4: seed 42, Adam, learning rate 1e-3, batch size 64, at
+most 30 epochs, early stopping on validation macro-F1 with patience 6. Each reported row is a
+single seed-42 run. The seed controls the weight initialisation and the batch order only; the
+train/validation subject split is fixed once by `src/prepare_data.py` at `--val-seed 42` and
+reused, so it is not re-drawn per run. The test set is the official UCI test partition (9 subjects
+never seen in training), evaluated once per run with the checkpoint selected on the validation
+split.
 
-The train/validation subject split is *not* re-drawn per seed: it is fixed once by
-`src/prepare_data.py` at `--val-seed 42` and reused by every run. The reported spread therefore
-reflects initialisation and shuffling variance only, and does not include the variance that a
-different subject-level split would introduce. With 21 training subjects that second source of
-variance is likely to be the larger of the two, so the standard deviations below should be read as
-a lower bound on the true run-to-run spread.
+**Table M1.** Main model (CNN-LSTM), one seed-42 run per input version.
 
-The test set is the official UCI test partition (9 subjects never seen in training), evaluated
-once per run with the checkpoint selected by validation accuracy.
-
-<!-- BEGIN GENERATED -->
-
-**Table M1.** Main model (CNN-LSTM) on the two input versions. Mean ± standard deviation over the seeds.
-
-| Version | Channels | Test acc (%) | Macro-F1 (%) | Val acc (%) | Params | Epochs | Train time (s) |
-|---|---|---|---|---|---|---|---|
-| Acc | 3 | 90.23 ± 1.48 | 90.26 ± 1.46 | 93.84 ± 0.35 | 307,462 | 14.7 | 53 |
-| Acc+Gyro | 6 | 91.56 ± 1.08 | 91.63 ± 1.09 | 95.04 ± 0.40 | 308,422 | 16.0 | 65 |
-
-**Table M2.** Individual runs behind Table M1.
-
-| Version | Seed | Val acc (%) | Test acc (%) | Macro-F1 (%) | Epochs | Train time (s) |
+| Version | Channels | Test acc (%) | Macro-F1 (%) | Params | Epochs | Train time (s) |
 |---|---|---|---|---|---|---|
-| Acc | 0 | 93.81 | 88.77 | 88.82 | 15 | 53 |
-| Acc | 1 | 93.49 | 90.19 | 90.21 | 12 | 43 |
-| Acc | 2 | 94.20 | 91.72 | 91.74 | 17 | 63 |
-| Acc+Gyro | 0 | 94.59 | 92.03 | 92.07 | 15 | 59 |
-| Acc+Gyro | 1 | 95.36 | 90.33 | 90.39 | 10 | 42 |
-| Acc+Gyro | 2 | 95.17 | 92.33 | 92.43 | 23 | 95 |
+| Acc | 3 | 90.26 | 90.31 | 307,462 | 18 | 65 |
+| Acc+Gyro | 6 | 91.11 | 91.20 | 308,422 | 12 | 44 |
 
-**Table M3.** Per-class recall of the main model (confusion matrices summed over seeds, then normalised by row).
+**Table M2 (robustness only).** The same model and protocol re-run over seeds 0, 1 and 2, to put
+a spread around the single reported seed-42 number. These runs are **not** the reported result
+(seed 42 is the fixed rule); they only measure initialisation and shuffling variance.
 
-| True class | Acc | Acc+Gyro |
-|---|---|---|
-| WALKING | 0.962 | 0.972 |
-| WALKING_UPSTAIRS | 0.900 | 0.957 |
-| WALKING_DOWNSTAIRS | 0.948 | 0.965 |
-| SITTING | 0.835 | 0.818 |
-| STANDING | 0.775 | 0.793 |
-| LAYING | 1.000 | 1.000 |
-
-**Figure M1.** Confusion matrices of the main model, one per input version (rows normalised, summed over seeds) — `figures/main_model_confusion.png`.
-**Figure M2.** Per-class recall, Acc vs Acc+Gyro — `figures/main_model_recall.png`.
-**Figure M3.** Training/validation loss and validation accuracy (first seed) — `figures/main_model_curves.png`.
-**Figure M4.** Test accuracy with standard-deviation error bars — `figures/main_model_accuracy.png`.
-<!-- END GENERATED -->
+| Version | Seed 0 | Seed 1 | Seed 2 | Mean ± sd |
+|---|---|---|---|---|
+| Acc | 88.73 | 89.41 | 89.68 | 89.27 ± 0.49 |
+| Acc+Gyro | 91.82 | 91.35 | 90.77 | 91.31 ± 0.53 |
 
 ### 5.2 Reading the results
 
-The following checks are what the numbers above have to settle. Each one is stated as a question
-so that it can be answered from the tables without interpretation drifting into what we hoped to
-see.
+**Does adding the gyroscope help the main model?** Compare the Acc+Gyro and Acc rows of Table M1:
+91.11% versus 90.26%, a gain of 0.85 points. The robustness sweep in Table M2 shows a seed-to-seed
+standard deviation of about 0.5 points, so this difference is roughly one to two seed deviations
+and should be read as weak evidence rather than a clear gyroscope benefit. The two runs also
+differ in more than information content — adding three channels changes the first convolution's
+parameter count (307,462 → 308,422) — so no strong claim about the gyroscope is made here.
 
-**Does adding the gyroscope help the main model?** Compare the Acc+Gyro and Acc rows of Table M1.
-The comparison is clean in design terms — identical architecture, identical hyper-parameters, only
-`C` changes — but note that the two runs differ in more than information content: doubling the
-input width also changes the parameter count slightly (the first convolution scales with `C`) and
-the optimisation problem the network solves. A difference smaller than the seed-to-seed spread
-should be reported as *not* a difference rather than as a small one, and a difference of a few
-tenths of a point should be checked against per-seed values in Table M2 to see whether it is one
-lucky run.
+**How does it compare with the baselines?** On Acc+Gyro the plain 1D-CNN scores 91.31% and the
+LSTM 89.35% (CNN/LSTM section), against 91.11% for the CNN-LSTM. The hybrid is therefore
+level with the plain CNN and about 1.8 points above the LSTM. The difference from the CNN is
+smaller than the seed-to-seed spread, so the honest reading is that the extra recurrence does not
+buy accuracy over the simpler CNN on this dataset; its value, if any, is the LSTM's ability to
+model temporal order, which this experiment does not show as a measurable gain.
 
-**Which classes remain hard?** Table M3 and Figure M2 give per-class recall. The classes that are
-expected to be confused are the three dynamic ones — walking, walking upstairs, walking
-downstairs — because they share the same underlying step cycle and differ mainly in rate and
-amplitude; and sitting versus standing, which are separated only by the orientation of the phone
-rather than by any motion. If recall is instead lost on a class we did not anticipate, that is
-more informative than the headline accuracy and should be stated explicitly.
-
-**Did the model converge?** Figure M3 shows the training and validation curves. Two things to
-check: whether the validation curve has visibly flattened (if it is still rising at epoch 40, the
-40-epoch budget was the binding constraint and the reported number understates the model), and
-whether the training curve has fallen well below the validation curve (if so, the model is
-overfitting and more dropout or weight decay, not more epochs, is what would help).
+**Did the model converge?** Training stopped after 18 epochs for Acc and 12 for Acc+Gyro, well
+inside the 30-epoch budget, because validation macro-F1 stopped improving for 6 epochs. The
+validation curve had therefore flattened before the budget was exhausted, so the reported numbers
+are not limited by the number of epochs.
 
 **Was the added accuracy worth the cost?** Table M1 reports parameters and training time next to
-accuracy. The fusion model is the most expensive of the three architectures, so the honest
-conclusion may well be that the simpler baseline reaches the same accuracy for a fraction of the
-cost.
+accuracy. At roughly 0.31 M parameters the CNN-LSTM is the most expensive of the three
+architectures, yet it does not beat the plain CNN's accuracy; the simpler baseline is the better
+value on this dataset. This is a result worth stating plainly rather than hiding.
 
 ### 5.3 Limitations
 
@@ -118,12 +81,13 @@ These hold regardless of what the numbers turn out to be, and should be stated i
 * **No augmentation.** `DATA.md` records that no augmentation was applied. For a
   subject-generalisation task, adding jitter or rotation to the training windows is the most
   likely source of further improvement.
-* **Three seeds.** Three seeds give a usable but coarse estimate of the standard deviation. With
-  differences of a few tenths of a point in play, five seeds would be needed to make the
-  comparison between versions conclusive.
+* **One reported seed, three robustness seeds.** The fixed rule reports seed 42, so the headline
+  numbers rest on one run each. The extra sweep in Table M2 gives a spread of about half an
+  accuracy point, which is enough to show that the gyro gain is not decisive but too coarse to
+  settle differences of a few tenths of a point.
 * **Reproducibility caveat.** Seeds fix the Python, NumPy and PyTorch RNGs, but on GPU hardware
   non-deterministic kernels mean a re-run can differ slightly. Reported figures come from a single
-  machine; cross-hardware comparison of training times in particular should be treated as
+  machine (CPU); cross-hardware comparison of training times in particular should be treated as
   indicative.
 
 ### References for this section
