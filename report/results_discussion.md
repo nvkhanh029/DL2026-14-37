@@ -17,7 +17,7 @@ This section brings the six reported runs together, asks how much a single seed-
 
 Three things stand out.
 
-**The gyroscope helps both model families by the same amount.** Adding the three gyroscope channels raises the Random Forest from 76.48% to 80.39% and the CNN-LSTM from 88.09% to 91.99%. Both gains are 3.9 points. A model that learns its own features from the raw signal and one that relies on five hand-made statistics per axis benefit equally, which suggests that the gain comes from information in the signal itself, not from one architecture being able to use it better. The error analysis (Section 7) shows where it comes from: almost all of it is in the three walking classes.
+**The gyroscope helps both model families by the same amount.** Adding the three gyroscope channels raises the Random Forest from 76.48% to 80.39% and the CNN-LSTM from 88.09% to 91.99%. Both gains are 3.9 points. A model that learns its own features from the raw signal and one that relies on five hand-made statistics per axis benefit equally, which suggests that the gain comes from information in the signal itself, not from one architecture being able to use it better. The error analysis (Section 7) shows where it comes from: most of it is in WALKING and UPSTAIRS (DOWNSTAIRS does not improve).
 
 **Learning features from the raw signal matters more than anything else.** On the same input, every deep model beats the Random Forest by 9 to 12 points. This is the largest effect in the project, larger than the sensor choice and much larger than the differences between the deep architectures.
 
@@ -36,7 +36,7 @@ All headline numbers come from a single run. To see how much that matters, we tr
 
 Seed 42 gives 88.80% here, not the reported 91.99%, even though the protocol is the same. The reason is mundane: `train_main_model.py` builds the model once to print its summary and then builds it again for training, so its weights are drawn from a later point in the random stream than in the analysis scripts. "Seed 42" therefore does not pick one fixed initialisation; it depends on the code around it.
 
-Two conclusions follow. First, the reported 91.99% sits at the upper end of what this model usually reaches; over these four seeds it averages about 90.0%. Second, a standard deviation of almost one point means that differences below about one point between single runs cannot be read as one model being better. This applies directly to the 0.7-point gap between the CNN-LSTM and the CNN. The 3.9-point gyroscope gain, on the other hand, is several standard deviations wide and survives this check.
+Two conclusions follow. First, the reported 91.99% sits at the upper end of what this model usually reaches; over these four seeds it averages about 90.0%. The CNN-LSTM robustness sweep in Table M2 (seeds 0, 1, 2, run on a different machine) gives a higher mean of 91.31%, so the level of the seed average depends on the machine and the run setup; the likely causes are the different machine and a different random-number stream in the two scripts, but we did not test this. Second, a standard deviation of almost one point means that differences below about one point between single runs cannot be read as one model being better. This applies directly to the 0.7-point gap between the CNN-LSTM and the CNN. The 3.9-point gyroscope gain, on the other hand, is several standard deviations wide and survives this check.
 
 The runs also stop early: 8 to 12 epochs, which means the selected checkpoint is from epoch 2 to 6. Validation contains only four subjects, so its macro-F1 jumps from epoch to epoch, and early stopping tends to lock in whichever epoch happened to peak. We think this is the main source of the seed-to-seed spread.
 
@@ -101,7 +101,7 @@ Two caveats apply. Each fold is a single seed-42 run, so the score of an individ
 
 ### 6.6 What we take from this
 
-- **On the research question:** adding the gyroscope improves recognition by about 3.9 points, for both the Random Forest and the CNN-LSTM, and this gain is well above run-to-run noise. Nearly all of it comes from separating the three walking activities.
+- **On the research question:** adding the gyroscope improves recognition by about 3.9 points, for both the Random Forest and the CNN-LSTM, and this gain is well above run-to-run noise. Most of it comes from separating WALKING and UPSTAIRS, while DOWNSTAIRS does not improve.
 - **On the models:** learning from the raw signal is worth about 10 points over hand-crafted features. Among the deep models, the CNN and the CNN-LSTM cannot be separated with one run each; the LSTM alone is clearly weaker.
 - **On the main model's design:** a bidirectional LSTM adds cost and instability but no accuracy. Shorter windows with averaged predictions do better than one pass over the full window, though part of that gain is an ensemble effect.
 - **On evaluation:** the person being tested matters more than the choice between the CNN and the CNN-LSTM. Across 30 subjects, accuracy ranges from 66% to 100%, and a single seed can move the main result by about a point.
