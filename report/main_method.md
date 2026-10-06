@@ -87,7 +87,7 @@ The data splits follow the procedure described in `DATA.md`. The official test s
 
 The reported result consists of one seed-42 run for each input version, consistent with the fixed seed in `configs/shared.yaml`. Section 5 also reports an additional three-seed robustness sweep; these runs are kept separate from the headline results.
 
-Training time is measured on the same machine for all runs and is reported alongside parameter count. Cost matters when comparing the three architectures: the 1D-CNN has the most parameters (about 0.57 million versus 0.31 million for the CNN-LSTM), and the LSTM is the slowest to train. Any accuracy difference should be read together with these costs.
+Training time is reported alongside parameter count, but it was **not** measured on one machine: the CNN and LSTM baselines (B), the CNN-LSTM robustness runs (C) and the reported CNN-LSTM runs (D) used different machines. As stated in Section 5, training times are therefore indicative only. Cost matters when comparing the three architectures: the 1D-CNN has the most parameters (about 0.57 million versus 0.31 million for the CNN-LSTM), and the LSTM is the slowest to train. Any accuracy difference should be read together with these costs.
 
 ### 4.6 Implementation
 
@@ -104,11 +104,15 @@ cd DL2026-Group14-Project37
 pip install -r requirements.txt
 python src/prepare_data.py                 # download UCI HAR and build acc.npz + acc_gyro.npz
 python scripts/train_main_model.py         # Acc + Acc+Gyro, seed 42 -> results/cnn_lstm_*.json
-python scripts/train_main_model.py --save-model   # also save checkpoints/cnn_lstm_<sensors>.pt for src/demo.py
+python scripts/train_main_model.py --save-model   # also save checkpoints/cnn_lstm_<sensors>.pt for src/demo.py (re-trains, see below)
 python scripts/train_main_model.py --robustness   # optional: seeds 0, 1, 2 -> results/robustness/
 ```
 
-`src/prepare_data.py` creates the two processed datasets and is the only step that requires network access. Before committing to a full training run, the pipeline can be checked with `--epochs 3` on a single input version. This is intended only as a smoke test; its resulting metrics must not be used in the report.
+`src/prepare_data.py` creates the two processed datasets and is the only step that requires network access. Before committing to a full training run, the pipeline can be checked with `--epochs 3` on a single input version. This is intended only as a smoke test: any run with a changed protocol (`--epochs`, `--patience`, `--lr`, `--batch-size` or a non-default `--seed`) is written to `results/smoke/` instead of `results/`, and its metrics must not be used in the report.
+
+`--save-model` re-trains the model, so it also overwrites `results/cnn_lstm_*.json` and `results/preds/*.npz`. Only machine D, which produced the reported numbers, should commit those files. On any other machine, run it to obtain the checkpoint and then `git restore results/` before committing.
+
+Seed 42 makes a run repeatable on the same machine and software, but not exactly across machines: a different CPU or GPU, PyTorch version or thread count can change the result. A re-run elsewhere should be close to Table M1, not identical.
 
 All paths are resolved relative to the project root, so the commands above behave consistently regardless of the working directory from which they are executed.
 

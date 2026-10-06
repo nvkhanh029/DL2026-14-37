@@ -5,6 +5,16 @@ Usage (from the repository root):
     python scripts/train_main_model.py --sensors acc   # one input version only
     python scripts/train_main_model.py --save-model    # also save checkpoints/cnn_lstm_<sensors>.pt
     python scripts/train_main_model.py --robustness    # extra 3-seed sweep (see below)
+    python scripts/train_main_model.py --epochs 3      # smoke test -> results/smoke/ (never reported)
+
+--save-model re-trains the model, so it also overwrites results/cnn_lstm_*.json
+and results/preds/*.npz. Only machine D (the machine of the reported numbers)
+should commit those files. On any other machine, run it for the checkpoint and
+then `git restore results/` before committing.
+
+Any run that changes the protocol (--epochs, --patience, --lr, --batch-size or a
+--seed other than the config seed) is treated as a smoke test and written to
+results/smoke/ instead, so it can never overwrite the reported results.
 
 Protocol (shared with the CNN/LSTM baselines and fixed in configs/shared.yaml):
 - Adam, learning rate 1e-3, batch size 64 (no weight decay, no LR schedule,
@@ -211,6 +221,15 @@ def main() -> None:
 
     config = load_config()
     results_dir = ROOT / config["paths"]["results"]
+    seed = args.seed if args.seed is not None else int(config["seed"])
+
+    # Guard: a run with a changed protocol must not overwrite the reported results.
+    protocol = (EPOCHS, PATIENCE, LEARNING_RATE, BATCH_SIZE)
+    changed = (args.epochs, args.patience, args.lr, args.batch_size) != protocol
+    if changed or (seed != int(config["seed"]) and not args.robustness):
+        results_dir = results_dir / "smoke"
+        print(f"NOTE: protocol changed -> smoke test, results go to {results_dir.relative_to(ROOT)}/ "
+              "and must not be used in the report.")
 
     if args.robustness:
         print("ROBUSTNESS sweep (seeds 0, 1, 2). The reported result is still the "
@@ -225,7 +244,6 @@ def main() -> None:
                 )
         return
 
-    seed = args.seed if args.seed is not None else int(config["seed"])
     for sensors in args.sensors:
         train_one(
             sensors, seed,
