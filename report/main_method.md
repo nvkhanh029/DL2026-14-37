@@ -69,7 +69,7 @@ The main model uses the same hyperparameters as the CNN and LSTM baselines. Keep
 | Batch size | 64 |
 | Max epochs | 30 |
 | Loss | Cross-entropy |
-| Early stopping | Validation macro-F1, patience 6 epochs |
+| Early stopping | Validation macro-F1, patience 6 epochs (the reported epoch count includes these 6 epochs) |
 | Model selection | Best validation macro-F1, restored before test evaluation |
 | Seed | 42 (fixed by `configs/shared.yaml`) |
 
@@ -87,7 +87,7 @@ The data splits follow the procedure described in `DATA.md`. The official test s
 
 The reported result consists of one seed-42 run for each input version, consistent with the fixed seed in `configs/shared.yaml`. Section 5 also reports an additional three-seed robustness sweep; these runs are kept separate from the headline results.
 
-Training time is measured on the same machine for all runs and is reported alongside parameter count. This is particularly important for the CNN-LSTM because it is the most computationally expensive of the three architectures. Its accuracy improvement, if any, therefore needs to be considered together with the additional computational cost.
+Training time is measured on the same machine for all runs and is reported alongside parameter count. Cost matters when comparing the three architectures: the 1D-CNN has the most parameters (about 0.57 million versus 0.31 million for the CNN-LSTM), and the LSTM is the slowest to train. Any accuracy difference should be read together with these costs.
 
 ### 4.6 Implementation
 
@@ -100,10 +100,11 @@ The script contains no model-specific training logic beyond instantiating `CNNLS
 ### 4.7 Reproducing This Section
 
 ```bash
-cd dl-data
+cd DL2026-Group14-Project37
 pip install -r requirements.txt
 python src/prepare_data.py                 # download UCI HAR and build acc.npz + acc_gyro.npz
 python scripts/train_main_model.py         # Acc + Acc+Gyro, seed 42 -> results/cnn_lstm_*.json
+python scripts/train_main_model.py --save-model   # also save checkpoints/cnn_lstm_<sensors>.pt for src/demo.py
 python scripts/train_main_model.py --robustness   # optional: seeds 0, 1, 2 -> results/robustness/
 ```
 

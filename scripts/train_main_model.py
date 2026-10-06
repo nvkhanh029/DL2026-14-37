@@ -3,6 +3,7 @@
 Usage (from the repository root):
     python scripts/train_main_model.py                 # acc + acc_gyro, seed 42
     python scripts/train_main_model.py --sensors acc   # one input version only
+    python scripts/train_main_model.py --save-model    # also save checkpoints/cnn_lstm_<sensors>.pt
     python scripts/train_main_model.py --robustness    # extra 3-seed sweep (see below)
 
 Protocol (shared with the CNN/LSTM baselines and fixed in configs/shared.yaml):
@@ -93,6 +94,7 @@ def train_one(
     batch_size: int,
     out_path: Path,
     preds_path: Path | None = None,
+    checkpoint_path: Path | None = None,
 ) -> dict:
     """Train and evaluate one run: CNN-LSTM x sensor version x seed.
 
@@ -160,6 +162,12 @@ def train_one(
     test_acc = accuracy_score(test_true, test_pred)
     test_f1 = f1_score(test_true, test_pred, average="macro")
 
+    # Optionally keep the best-validation weights (needed by src/demo.py).
+    if checkpoint_path is not None:
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(best_state, checkpoint_path)
+        print(f"  saved -> {checkpoint_path.relative_to(ROOT)}")
+
     # Save the test predictions (true and predicted labels for the 2,947 test
     # windows) so the analysis/visualization person can build confusion matrices
     # without re-training. Saved for every reported run.
@@ -195,6 +203,8 @@ def main() -> None:
     parser.add_argument("--patience", type=int, default=PATIENCE)
     parser.add_argument("--lr", type=float, default=LEARNING_RATE)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--save-model", action="store_true",
+                        help="save the best weights to checkpoints/cnn_lstm_<sensors>.pt")
     parser.add_argument("--robustness", action="store_true",
                         help="extra sweep over seeds 0, 1, 2, written to results/robustness/")
     args = parser.parse_args()
@@ -223,6 +233,8 @@ def main() -> None:
             learning_rate=args.lr, batch_size=args.batch_size,
             out_path=results_dir / f"cnn_lstm_{sensors}.json",
             preds_path=results_dir / "preds" / f"cnn_lstm_{sensors}_preds.npz",
+            checkpoint_path=(ROOT / "checkpoints" / f"cnn_lstm_{sensors}.pt"
+                             if args.save_model else None),
         )
 
 
