@@ -46,12 +46,13 @@ WINDOW = 128         # samples per window (2.56 s at 50 Hz), fixed by the datase
 def conv_block(c_in, c_out, pool=True):
     """One Conv1d-BN-ReLU-(pool) stage.
 
-    `padding=2` with `kernel_size=5` keeps the time axis unchanged ('same' convolution), so the
-    pooling is the only thing that reduces the length. BatchNorm after the convolution keeps the
-    activations scaled for the LSTM that follows.
+    `padding=2` with `kernel_size=5` keeps the time axis unchanged ('same' convolution, nn.Conv1d), so the
+    pooling is the only thing that reduces the length. 
+    After the convolution, BatchNorm normalizes feature activations across the mini-batch to stabilize training for the LSTM downstream.
     """
-    # Order matters: normalising the convolution output before the non-linearity is what keeps
-    # the activations well scaled. Pooling is optional so the block can also be used unpooled.
+    """
+    Order matters: normalising the convolution output before the non-linearity is what keeps the activations well scaled. Pooling is optional so the block can also be used unpooled.
+    """
     layers = [nn.Conv1d(c_in, c_out, KERNEL_SIZE, padding=KERNEL_SIZE // 2),
               nn.BatchNorm1d(c_out), nn.ReLU()]
     if pool:
@@ -68,13 +69,16 @@ class CNNLSTM(nn.Module):
         c1 = CONV_CHANNELS[0]
         c2 = CONV_CHANNELS[1]
         self.window = window
-        # Two conv blocks, each followed by a pooling layer that halves the time axis.
+        # Two conv blocks chain, each followed by a pooling layer that halves the time axis.
         self.features = nn.Sequential(conv_block(c, c1), conv_block(c1, c2))
         # The two pooling layers divide the window by 4, which is how many steps the LSTM sees.
         self.n_steps = window // 4
+        
         # dropout=0 is required for a single-layer LSTM; PyTorch warns if dropout is set there.
         self.rnn = nn.LSTM(c2, hidden, layers, batch_first=True,
                            dropout=dropout if layers > 1 else 0.0)
+
+        # classifier head
         self.head = nn.Sequential(nn.Dropout(dropout), nn.Linear(hidden, n_classes))
 
     def forward(self, x):

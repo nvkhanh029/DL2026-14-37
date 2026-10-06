@@ -5,5 +5,5 @@
   "accuracy": 0.9026,
   "macro_f1": 0.9031,
   "epochs": 18,
-  "train_time_sec": 64.8
+  "train_time_sec": 63.5
 }

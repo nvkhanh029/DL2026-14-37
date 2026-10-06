@@ -1,55 +1,29 @@
 ## 4. Main Method
 
-This section describes the main model of the project and the protocol used to train and evaluate
-it. The dataset, its splits and its preprocessing are defined in `DATA.md`; here we fix the
-architecture and the training recipe, so that the model and the baselines are compared under
-identical conditions.
+This section describes the main model and the protocol used to train and evaluate it. The dataset, data splits, and preprocessing are defined in `DATA.md`. This section focuses on the model architecture and training procedure so that the main model and the baseline models can be compared under the same conditions.
 
-### 4.1 Design rationale
+### 4.1 Design Rationale
 
-The task is to classify a 2.56 s window of inertial signal into one of six activities. Two
-properties of the signal make a single network type a poor fit on its own:
+The task is to classify a 2.56-second window of inertial sensor data into one of six activities. The signal contains two types of information that are not captured equally well by a single model architecture:
 
-* **Local patterns.** Activity identity is expressed by short, recurring waveform shapes — a
-  heel strike, a step, a turn — that occupy only a few dozen samples. These are what a
-  convolutional filter is good at detecting, and they are the same filters regardless of where in
-  the window they occur.
-* **Long-range structure.** The *order* and *rhythm* of those patterns also matter: climbing
-  stairs and walking downstairs contain similar instantaneous motions but differ in how those
-  motions repeat over the window. This is temporal structure over the whole window, which is what
-  a recurrent network models.
+- **Local patterns.** Activity identity is expressed through short, recurring waveform patterns, such as heel strikes, individual steps, or turns. These patterns may occur at different positions within a window, making convolutional filters well suited to detecting them.
+- **Long-range temporal structure.** The order and rhythm of these local patterns also matter. For example, climbing stairs and walking downstairs can contain similar instantaneous movements but differ in how those movements are arranged and repeated over time. This longer-term temporal structure is well suited to recurrent networks.
 
-The main model is therefore a **hybrid**: a small 1D CNN compresses each window into a short
-sequence of learned local descriptors, and an LSTM models how those descriptors evolve across the
-window before classifying. The convolutional stage reduces the 128-sample window to 32 time steps:
-the two pooling layers give a stride of 4, so each step advances four samples and has a receptive
-field of about 16 samples (roughly 0.3 s at 50 Hz). This removes local redundancy and cuts the
-computational cost of the recurrence by a factor of four, while the steps are still fine enough
-that a single step, which lasts roughly 25–35 samples (0.5–0.7 s), is still spread over several of
-them.
+The main model therefore uses a **hybrid CNN-LSTM architecture**. A small 1D CNN first extracts local features and compresses each input window into a shorter sequence of learned descriptors. An LSTM then models how those descriptors evolve over time before producing the final classification.
 
-The two halves are not chosen arbitrarily. The convolutional front end follows the same
-`Conv1d → ReLU → MaxPool` motif, the same kernel width and the same first two channel widths as
-the plain 1D-CNN baseline, but inserts BatchNorm after each convolution so that the LSTM receives
-well-scaled inputs. The recurrent back end follows the standalone LSTM: hidden size 128, two
-layers and the same last-step readout, with dropout 0.3 instead of the baseline's 0.5. The main
-model is therefore *not* a strict superset of the two baselines — it adds BatchNorm and uses its
-own dropout — but the two branches keep comparable capacity, so a difference in accuracy can be
-read as a property of the fusion rather than of a much larger network. All three models also share
-one training protocol (Section 4.4), so the comparison in Section 5 is not confounded by the recipe.
+The convolutional front end reduces the original 128-sample window to 32 time steps. The two pooling layers produce an effective stride of 4, so consecutive LSTM inputs are four samples apart. The resulting features have a receptive field of approximately 16 samples, corresponding to roughly 0.3 seconds at 50 Hz. This reduction removes local redundancy and decreases the computational cost of the recurrent stage by a factor of four. At the same time, the resulting sequence remains sufficiently fine-grained: an individual step, which typically spans roughly 25–35 samples (0.5–0.7 seconds), is represented across several LSTM time steps.
 
-The parameter counts in Table M1 show where the capacity sits. For the Acc input the model has
-307,462 parameters, of which the convolutional front end holds 42,496 (14%), the LSTM 264,192
-(86%), and the linear head 774. The model is therefore dominated by the recurrent branch, not
-evenly balanced between the two. That is a consequence of the design above rather than an accident:
-a 2-layer LSTM with 128 hidden units is expensive relative to two narrow convolutions, and reusing
-the standalone LSTM's hidden size and depth keeps the recurrence comparable to that baseline. The
-practical consequence is that training time is dominated by the recurrence, so the front end's
-4x reduction of the sequence length is what keeps the model affordable at all.
+The two components are based on the corresponding baseline architectures rather than being chosen independently. The convolutional front end follows the same `Conv1d → ReLU → MaxPool` structure, kernel width, and first two channel widths as the plain 1D-CNN baseline, while adding BatchNorm after each convolution. The recurrent back end follows the standalone LSTM baseline, using a hidden size of 128 and two layers, together with the same last-step readout. The main model uses dropout of 0.3 instead of the baseline's 0.5.
+
+The CNN-LSTM is therefore **not** a strict combination or superset of the two baselines: it adds BatchNorm and uses a different dropout value. Nevertheless, the two branches retain comparable capacity, making the comparison more meaningful because any accuracy difference is less likely to result simply from a substantially larger network. All three models also use the same training protocol described in Section 4.4, avoiding differences caused by the training recipe.
+
+The parameter counts in Table M1 show that most of the model capacity is concentrated in the recurrent component. For the Acc input, the model has 307,462 parameters: 42,496 (14%) in the convolutional front end, 264,192 (86%) in the LSTM, and 774 in the linear classification head. The architecture is therefore dominated by the recurrent branch rather than being evenly balanced between the CNN and LSTM.
+
+This distribution follows directly from the design. A two-layer LSTM with 128 hidden units requires substantially more parameters than the two relatively narrow convolutional layers. Keeping the same hidden size and depth as the standalone LSTM also makes the recurrent component directly comparable to that baseline. In practice, training time is therefore dominated by the recurrent stage, making the CNN's fourfold reduction in sequence length important for keeping the model computationally manageable.
 
 ### 4.2 Architecture
 
-**Table 3.** Main model (CNN-LSTM), input `(batch, 128, C)` with `C` sensor channels.
+**Table 3.** Main model (CNN-LSTM), with input shape `(batch, 128, C)`, where `C` is the number of sensor channels.
 
 | # | Stage | Output shape |
 |---|---|---|
@@ -61,29 +35,17 @@ practical consequence is that training time is dominated by the recurrence, so t
 | 5 | Take the last time step | (B, 128) |
 | 6 | Dropout(0.3) + Linear(128→6) | (B, 6) |
 
-Three implementation details are worth noting.
+Three implementation details are particularly important:
 
-* **Padding.** Kernel size 5 with padding 2 is a *same* convolution, so the time axis is only
-  reduced by the two pooling layers and the shape arithmetic in Table 3 is exact for any window
-  length divisible by 4.
-* **BatchNorm in the front end.** Batch normalisation after each convolution keeps the feature
-  activations on a scale the LSTM can be trained on stably. This matters more here than in a
-  plain CNN, because the LSTM's recurrent weights are sensitive to the scale of their input.
-* **Last-step readout.** The classification head reads the LSTM's output at the final time step
-  rather than an average over steps. The last hidden state is the only one that has attended to
-  the whole window, so it is the natural summary; using it also matches the standalone LSTM
-  baseline, keeping the two comparable.
+- **Padding.** Each convolution uses kernel size 5 and padding 2, which preserves the temporal dimension. Consequently, the time axis is reduced only by the two pooling layers, and the shapes in Table 3 are exact for any input window whose length is divisible by 4.
+- **Batch normalization.** BatchNorm is applied after each convolution to keep feature activations on a stable scale before they are passed to the LSTM. This is especially relevant in the hybrid model because the recurrent weights are sensitive to the scale of their inputs.
+- **Last-step readout.** The classification head uses the LSTM output at the final time step rather than averaging outputs across the sequence. The final hidden state has incorporated information from the entire window, making it a natural summary for classification. This also matches the standalone LSTM baseline and keeps the comparison consistent.
 
-Dropout of 0.3 is applied inside the LSTM (between its two layers) and again before the linear
-head. We use cross-entropy loss on the six logits, i.e. plain softmax classification with no class
-weighting. `DATA.md` records that the classes are close enough to balanced across the splits for
-this to be appropriate; macro-F1 is reported alongside accuracy precisely so that any residual
-per-class imbalance would be visible.
+Dropout of 0.3 is applied inside the LSTM, between its two layers, and again immediately before the linear classification head. The model is trained with cross-entropy loss on the six output logits, corresponding to standard multi-class classification without class weighting. According to `DATA.md`, the classes are sufficiently balanced across the data splits for class weighting to be unnecessary. Macro-F1 is nevertheless reported alongside accuracy so that performance differences between classes remain visible.
 
-### 4.3 Input versions
+### 4.3 Input Versions
 
-The main model is evaluated on the two input versions defined in `DATA.md`, so that the effect of
-adding the gyroscope can be measured on the main model as well as on the baselines.
+The main model is evaluated using the two input versions defined in `DATA.md`. This allows the effect of adding gyroscope information to be evaluated for the main model as well as for the baseline models.
 
 **Table 4.** Input versions used for the main model.
 
@@ -92,18 +54,13 @@ adding the gyroscope can be measured on the main model as well as on the baselin
 | Acc | `total_acc` x, y, z | 128 × 3 | 3 |
 | Acc+Gyro | `total_acc` x, y, z + `body_gyro` x, y, z | 128 × 6 | 6 |
 
-Only the number of input channels `C` changes between the two versions; every other
-hyper-parameter is fixed and shared. This is deliberate: any difference in accuracy between the
-two rows of Table M1 is attributable to the extra rotational information, not to a re-tuned
-model.
+Only the number of input channels `C` changes between the two versions. All other hyperparameters remain fixed. This controlled setup ensures that any performance difference between the two input versions is attributable to the additional rotational information rather than to a separately tuned model.
 
-### 4.4 Training protocol
+### 4.4 Training Protocol
 
-The main model is trained with the same hyper-parameters as the CNN and LSTM baselines, so a
-comparison between the three is not confounded by the training recipe. The settings below are the
-shared ones.
+The main model uses the same hyperparameters as the CNN and LSTM baselines. Keeping the training procedure fixed ensures that comparisons between the three architectures are not confounded by different optimisation settings.
 
-**Table 5.** Training hyper-parameters, shared by the CNN, LSTM and CNN-LSTM models.
+**Table 5.** Training hyperparameters shared by the CNN, LSTM, and CNN-LSTM models.
 
 | Setting | Value |
 |---|---|
@@ -113,56 +70,34 @@ shared ones.
 | Max epochs | 30 |
 | Loss | Cross-entropy |
 | Early stopping | Validation macro-F1, patience 6 epochs |
-| Model selection | Best validation macro-F1, restored before the test evaluation |
+| Model selection | Best validation macro-F1, restored before test evaluation |
 | Seed | 42 (fixed by `configs/shared.yaml`) |
 
-Seed 42 is fixed by `configs/shared.yaml` and is set for `random`, NumPy and PyTorch before each
-run. It controls the weight initialisation and the batch shuffling; it does **not** re-draw the
-train/validation subject split, which is chosen once by `src/prepare_data.py` at `--val-seed 42`
-and reused by every run (see DATA.md). The reported result is a single seed-42 run per input
-version; Section 5 additionally lists an extra three-seed sweep (seeds 0, 1, 2) as a robustness
-check on initialisation and shuffling variance. That spread is a lower bound on the true
-run-to-run variability, because it omits the variance a different subject-level split would
-introduce.
+Seed 42 is defined in `configs/shared.yaml` and is applied to Python's `random` module, NumPy, and PyTorch before each run. It controls weight initialisation and batch shuffling. It does **not** regenerate the train/validation subject split: that split is created once by `src/prepare_data.py` using `--val-seed 42` and then reused across runs, as described in `DATA.md`.
 
-Early stopping and model selection monitor **validation macro-F1**, not accuracy or loss.
-Macro-F1 weights the six classes equally, so a class the model is failing cannot be hidden by the
-three large dynamic classes — which is exactly the failure mode early stopping should guard
-against. Because the official test set must not be consulted for model selection, the weights from
-the best validation epoch are restored before the single test evaluation.
+The reported result for each input version is based on a single seed-42 run. Section 5 additionally reports a three-seed sweep using seeds 0, 1, and 2 as a robustness check. This sweep measures variation caused by initialisation and batch shuffling, but it does not capture the additional variability that could result from changing the subject-level train/validation split. It should therefore be interpreted as a lower bound on total run-to-run variability.
 
-### 4.5 Evaluation protocol
+Early stopping and model selection are based on **validation macro-F1**, rather than accuracy or loss. Macro-F1 gives equal weight to all six classes, preventing strong performance on the larger dynamic classes from masking poor performance on a weaker class. The best validation checkpoint is restored before the official test evaluation, ensuring that the test set is not used to select the model.
 
-Metrics are test accuracy and macro-averaged F1. Accuracy is the headline number because it
-matches the benchmark convention for this dataset; macro-F1 is reported next to it so that
-performance cannot be carried by the three dynamic classes while a static class fails.
+### 4.5 Evaluation Protocol
 
-Splits follow `DATA.md`: the official test subjects are untouched until the final evaluation of a
-run, normalisation statistics come from the training windows only, and each run touches the test
-set exactly once, after early stopping has selected the checkpoint. The reported result is a single
-seed-42 run per input version, matching the fixed seed in `configs/shared.yaml`; Section 5
-additionally lists an extra three-seed sweep as a robustness check, kept separate from the reported
-numbers.
+The primary evaluation metrics are **test accuracy** and **macro-averaged F1**. Accuracy is the headline metric because it follows the benchmark convention for this dataset. Macro-F1 is reported alongside it to provide a class-balanced view of performance and to ensure that strong results on the three larger dynamic classes do not conceal poor performance on other classes.
 
-Training time is measured on the same machine for all runs and is reported next to the parameter
-count, because the fusion model is the most expensive of the three and the accuracy it buys has
-to be weighed against that cost.
+The data splits follow the procedure described in `DATA.md`. The official test subjects remain untouched until final evaluation, and normalisation statistics are computed from the training windows only. Each run evaluates the test set exactly once, after early stopping has selected the best validation checkpoint.
+
+The reported result consists of one seed-42 run for each input version, consistent with the fixed seed in `configs/shared.yaml`. Section 5 also reports an additional three-seed robustness sweep; these runs are kept separate from the headline results.
+
+Training time is measured on the same machine for all runs and is reported alongside parameter count. This is particularly important for the CNN-LSTM because it is the most computationally expensive of the three architectures. Its accuracy improvement, if any, therefore needs to be considered together with the additional computational cost.
 
 ### 4.6 Implementation
 
-The model is implemented in PyTorch under `src/models/`. The main model is
-`src/models/cnn_lstm.py`; the CNN and LSTM baselines are `src/models/cnn.py` and
-`src/models/lstm.py` respectively and are owned and reported by the CNN/LSTM section of the
-report. Each file defines one architecture only.
+The models are implemented in PyTorch under `src/models/`. The main CNN-LSTM model is defined in `src/models/cnn_lstm.py`. The CNN and LSTM baselines are implemented in `src/models/cnn.py` and `src/models/lstm.py`, respectively, and are covered by the CNN/LSTM section of the report. Each file contains one architecture.
 
-The CNN-LSTM is trained by `scripts/train_main_model.py`. It is deliberately kept in `scripts/`
-rather than `src/train.py`, because `src/train.py` is the leader's shared-trainer stub. The script
-reads the seed and the result paths from `configs/shared.yaml` and uses the same settings as the
-CNN/LSTM harness (`scripts/train_cnn_lstm.py`), so the training recipe of Section 4.4 is shared
-rather than re-implemented per model. It has no model-specific logic beyond instantiating
-`CNNLSTM`, so a baseline can be run through the same code by passing a different module.
+The CNN-LSTM is trained using `scripts/train_main_model.py`. This script is kept under `scripts/` rather than `src/train.py` because `src/train.py` serves as the shared trainer stub maintained by the project leader. The training script reads the seed and result paths from `configs/shared.yaml` and follows the same settings as the CNN/LSTM training harness in `scripts/train_cnn_lstm.py`. As a result, the training recipe described in Section 4.4 is shared rather than separately reimplemented for each model.
 
-### 4.7 Reproducing this section
+The script contains no model-specific training logic beyond instantiating `CNNLSTM`, allowing the same training infrastructure to be reused with a different model module when required.
+
+### 4.7 Reproducing This Section
 
 ```bash
 cd dl-data
@@ -172,19 +107,14 @@ python scripts/train_main_model.py         # Acc + Acc+Gyro, seed 42 -> results/
 python scripts/train_main_model.py --robustness   # optional: seeds 0, 1, 2 -> results/robustness/
 ```
 
-`src/prepare_data.py` writes the two processed datasets and is the only step that needs network
-access. To confirm the pipeline runs before committing to a run, use `--epochs 3` with a single
-input version; that is a smoke test and its numbers are not reportable.
+`src/prepare_data.py` creates the two processed datasets and is the only step that requires network access. Before committing to a full training run, the pipeline can be checked with `--epochs 3` on a single input version. This is intended only as a smoke test; its resulting metrics must not be used in the report.
 
-All paths resolve relative to the project root, so the commands behave identically from any
-working directory.
+All paths are resolved relative to the project root, so the commands above behave consistently regardless of the working directory from which they are executed.
 
-### References for this section
-* D. Anguita, A. Ghio, L. Oneto, X. Parra, and J. L. Reyes-Ortiz, "A public domain dataset for
-  human activity recognition using smartphones," in *Proc. ESANN*, 2013.
-* S. Hochreiter and J. Schmidhuber, "Long short-term memory," *Neural Computation*, 9(8), 1997.
-* Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner, "Gradient-based learning applied to document
-  recognition," *Proc. IEEE*, 86(11), 1998.
-* S. Ioffe and C. Szegedy, "Batch normalization: Accelerating deep network training by reducing
-  internal covariate shift," *ICML*, 2015.
-* D. P. Kingma and J. Ba, "Adam: A method for stochastic optimization," *ICLR*, 2015.
+### References for This Section
+
+- D. Anguita, A. Ghio, L. Oneto, X. Parra, and J. L. Reyes-Ortiz, "A public domain dataset for human activity recognition using smartphones," in *Proc. ESANN*, 2013.
+- S. Hochreiter and J. Schmidhuber, "Long short-term memory," *Neural Computation*, 9(8), 1997.
+- Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner, "Gradient-based learning applied to document recognition," *Proc. IEEE*, 86(11), 1998.
+- S. Ioffe and C. Szegedy, "Batch normalization: Accelerating internal covariate shift," *ICML*, 2015.
+- D. P. Kingma and J. Ba, "Adam: A method for stochastic optimization," *ICLR*, 2015.
